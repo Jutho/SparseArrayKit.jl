@@ -3,6 +3,10 @@ uuid = "a9a3c162-d163-4c15-8926-b8794fbefed2"
 authors = ["Jutho Haegeman <jutho.haegeman@ugent.be> and Maarten Van Damme <Maarten.VanDamme@UGent.be>"]
 version = "0.1.0"
 
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Requires = "ae029012-a4dd-5104-9daa-d747884805df"
+
 [compat]
 julia = "1.4"
 
