@@ -43,7 +43,7 @@ Base.@propagate_inbounds Base.getindex(a::SparseArray{T,N}, I::Vararg{Int,N}) wh
     if v != zero(v)
         a.data[I] = v
     else
-        delete!(A.data, I) # does not do anything if there was no key I
+        delete!(a.data, I) # does not do anything if there was no key I
     end
     return v
 end
@@ -91,10 +91,12 @@ function Base.Array{T,N}(a::SparseArray) where {T,N}
 end
 
 SparseArray(a::AbstractArray{T,N}) where {T,N} = SparseArray{T,N}(a)
-function SparseArray{T,N}(a::AbstractArray) where {T,N}
-    d = SparseArray{T}(undef, size(a))
+SparseCOOArray(a::AbstractArray{T,N}) where {T,N} = SparseCOOArray{T,N}(a)
+SparseDOKArray(a::AbstractArray{T,N}) where {T,N} = SparseDOKArray{T,N}(a)
+function (::Type{S})(a::AbstractArray) where {S<:SparseArray}
+    d = S(undef, size(a))
     for I in CartesianIndices(a)
-        a[I] == zero(T) && continue
+        iszero(a[I]) && continue
         d[I] = a[I]
     end
     return d

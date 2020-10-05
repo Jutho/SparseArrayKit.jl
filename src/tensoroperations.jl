@@ -1,6 +1,7 @@
 # TensorOperations compatiblity
 #-------------------------------
 import .TensorOperations: memsize, add!, trace!, contract!
+using .TensorOperations: IndexTuple, TupleTools
 
 memsize(A::SparseArray) = memsize(A.data)
 
@@ -13,9 +14,9 @@ function add!(α, A::SparseArray{<:Any, N}, CA::Symbol,
         throw(DimensionMismatch("non-matching sizes while adding arrays"))
 
     β == one(β) || LinearAlgebra.lmul!(β, C);
-    for (kA, vA) in A.data
-        kC = CartesianIndex(TupleTools.getindices(kA.I, indCinA))
-        C[kC] += α* (conjA == :C ? conj(vA) : vA)
+    for (IA, vA) in A.data
+        IC = CartesianIndex(TupleTools.getindices(IA.I, indCinA))
+        C[IC] += α* (conjA == :C ? conj(vA) : vA)
     end
     C
 end
@@ -41,13 +42,13 @@ function trace!(α, A::SparseArray{<:Any, NA}, CA::Symbol, β, C::SparseArray{<:
 
     β == one(β) || LinearAlgebra.lmul!(β, C);
 
-    for (kA, v) in A.data
-        kAc1 = CartesianIndex(TupleTools.getindices(kA.I, cindA1))
-        kAc2 = CartesianIndex(TupleTools.getindices(kA.I, cindA2))
-        kAc1 == kAc2 || continue
+    for (IA, v) in A.data
+        IAc1 = CartesianIndex(TupleTools.getindices(IA.I, cindA1))
+        IAc2 = CartesianIndex(TupleTools.getindices(IA.I, cindA2))
+        IAc1 == IAc2 || continue
 
-        kC = CartesianIndex(TupleTools.getindices(kC.I, indCinA))
-        C[kC] += α * (conjA == :C ? conj(v) : v)
+        IC = CartesianIndex(TupleTools.getindices(IA.I, indCinA))
+        C[IC] += α * (conjA == :C ? conj(v) : v)
     end
     return C
 end
@@ -85,20 +86,52 @@ function contract!(α, A::SparseArray, CA::Symbol, B::SparseArray, CB::Symbol,
 
     β == one(β) || LinearAlgebra.lmul!(β, C);
 
-    for (kA, vA) in A.data
-        kAc = CartesianIndex(TupleTools.getindices(kA.I, cindA))
-        kAo = CartesianIndex(TupleTools.getindices(kA.I, oindA))
-        for (kB, vB) in B.data
-            kBc = CartesianIndex(TupleTools.getindices(kB.I, cindB))
-            kAc == kBc || continue
+    keysA = sort!(collect(NonZeroIndices(A)),
+                    by = IA->CartesianIndex(TupleTools.getindices(IA.I, cindA)))
+    keysB = sort!(collect(NonZeroIndices(B)),
+                    by = IB->CartesianIndex(TupleTools.getindices(IB.I, cindB)))
 
-            kBo = CartesianIndex(TupleTools.getindices(kB.I, oindB))
-
-            kABo = CartesianIndex(kAo, kBo)
-
-            kC = CartesianIndex(TupleTools.getindices(kABo.I, indCinoAB))
-
-            C[kC] += α * (CA == :C ? conj(vA) : vA) * (CB == :C ? conj(vB) : vB)
+    iA = iB = 1
+    @inbounds while iA <= length(keysA) && iB <= length(keysB)
+        IA = keysA[iA]
+        IB = keysB[iB]
+        IAc = CartesianIndex(TupleTools.getindices(IA.I, cindA))
+        IBc = CartesianIndex(TupleTools.getindices(IB.I, cindB))
+        if IAc == IBc
+            Ic = IAc
+            jA = iA
+            while jA < length(keysA)
+                if CartesianIndex(TupleTools.getindices(keysA[jA+1].I, cindA)) == Ic
+                    jA += 1
+                else
+                    break
+                end
+            end
+            jB = iB
+            while jB < length(keysB)
+                if CartesianIndex(TupleTools.getindices(keysB[jB+1].I, cindB)) == Ic
+                    jB += 1
+                else
+                    break
+                end
+            end
+            for kB in iB:jB, kA in iA:jA
+                IA = keysA[kA]
+                IB = keysB[kB]
+                IAo = CartesianIndex(TupleTools.getindices(IA.I, oindA))
+                IBo = CartesianIndex(TupleTools.getindices(IB.I, oindB))
+                IABo = CartesianIndex(IAo, IBo)
+                IC = CartesianIndex(TupleTools.getindices(IABo.I, indCinoAB))
+                vA = A[IA]
+                vB = B[IB]
+                C[IC] += α * (CA == :C ? conj(vA) : vA) * (CB == :C ? conj(vB) : vB)
+            end
+            iA = jA+1
+            iB = jB+1
+        elseif IAc < IBc
+            iA += 1
+        else
+            iB += 1
         end
     end
     C
