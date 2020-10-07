@@ -1,5 +1,11 @@
 # TODO: Basic arithmetic, comparison, ...
 
+Base.:*(a::Number,x::SparseArray) = LinearAlgebra.lmul!(a,copy(x));
+Base.:*(x::SparseArray,a::Number) = LinearAlgebra.rmul!(copy(x),a);
+Base.:\(a::Number,x::SparseArray) = LinearAlgebra.ldiv!(a,copy(x));
+Base.:/(x::SparseArray,a::Number) = LinearAlgebra.rdiv!(copy(x),a);
+Base.:+(x::SparseArray,y::SparseArray) = LinearAlgebra.axpy!(1,x,copy(y))
+
 # Vector space functions
 #------------------------
 function LinearAlgebra.lmul!(a::Number, x::SparseArray)
@@ -12,8 +18,16 @@ function LinearAlgebra.rmul!(x::SparseArray, a::Number)
     rmul!(x.data.vals, a)
     return x
 end
+function LinearAlgebra.ldiv!(a::Number, x::SparseArray)
+    ldiv!(a, x.data.vals)
+    return x
+end
+function LinearAlgebra.rdiv!(x::SparseArray, a::Number)
+    rdiv!(x.data.vals, a)
+    return x
+end
 function LinearAlgebra.axpby!(α, x::SparseArray, β, y::SparseArray)
-    lmul!(y, β)
+    lmul!(β,y)
     for (k, v) in x.data
         y[k] += α*v
     end
