@@ -16,7 +16,7 @@ function add!(α, A::SparseArray{<:Any, N}, CA::Symbol,
     β == one(β) || LinearAlgebra.lmul!(β, C);
     for (IA, vA) in A.data
         IC = CartesianIndex(TupleTools.getindices(IA.I, indCinA))
-        C[IC] += α* (conjA == :C ? conj(vA) : vA)
+        C[IC] += α* (CA == :C ? conj(vA) : vA)
     end
     C
 end
@@ -48,7 +48,7 @@ function trace!(α, A::SparseArray{<:Any, NA}, CA::Symbol, β, C::SparseArray{<:
         IAc1 == IAc2 || continue
 
         IC = CartesianIndex(TupleTools.getindices(IA.I, indCinA))
-        C[IC] += α * (conjA == :C ? conj(v) : v)
+        C[IC] += α * (CA == :C ? conj(v) : v)
     end
     return C
 end
