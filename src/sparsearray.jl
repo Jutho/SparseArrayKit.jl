@@ -114,5 +114,9 @@ Base.copy(a::SparseArray) = SparseArray(a)
 
 Base.size(a::SparseArray) = a.dims
 
+Base.similar(a::SparseCOOArray, ::Type{S}, dims::Dims{N}) where {S,N} =
+    SparseCOOArray{S}(undef, dims)
+Base.similar(a::SparseDOKArray, ::Type{S}, dims::Dims{N}) where {S,N} =
+    SparseDOKArray{S}(undef, dims)
 Base.similar(a::SparseArray, ::Type{S}, dims::Dims{N}) where {S,N} =
     SparseArray{S}(undef, dims)
