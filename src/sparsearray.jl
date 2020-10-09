@@ -27,8 +27,13 @@ SparseDOKArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N} =
 SparseCOOArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N} =
     SparseCOOArray{T,N}(undef, dims)
 
-NonZeroIndices(a::SparseArray) = keys(a.data)
-nonzeros(A::SparseArray) = values(A.data)
+nonzero_pairs(a::SparseArray) = a.data
+nonzero_keys(a::SparseArray) = keys(nonzero_pairs(a))
+nonzero_values(a::SparseArray) = values(nonzero_pairs(a))
+nonzero_length(a::SparseArray) = length(nonzero_pairs(a))
+
+_zero!(x::SparseArray) = empty!(x.data)
+_sizehint!(x::SparseArray, n) = sizehint!(x.data, n)
 
 # elementary getindex and setindex!
 @inline function Base.getindex(a::SparseArray{T,N}, I::CartesianIndex{N}) where {T,N}
@@ -113,6 +118,16 @@ end
 Base.copy(a::SparseArray) = SparseArray(a)
 
 Base.size(a::SparseArray) = a.dims
+
+function Base.copy!(dst::SparseArray, src::SparseArray)
+    axes(dst) == axes(src) || throw(ArgumentError(
+        "arrays must have the same axes for copy! (consider using `copyto!`)"))
+
+    _zero!(dst)
+    for (I, v) in nonzero_pairs(src)
+        dst[I] = v
+    end
+end
 
 Base.similar(a::SparseCOOArray, ::Type{S}, dims::Dims{N}) where {S,N} =
     SparseCOOArray{S}(undef, dims)

@@ -4,7 +4,7 @@ using LinearAlgebra
 using Requires
 
 export SparseArray, SparseDOKArray, SparseCOOArray
-export NonZeroIndices
+export nonzero_pairs, nonzero_keys, nonzero_values, nonzero_length
 
 include("sortedvectordict.jl")
 include("sparsearray.jl")

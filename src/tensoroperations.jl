@@ -13,7 +13,7 @@ function add!(α, A::SparseArray{<:Any, N}, CA::Symbol,
     size(C) == TupleTools.getindices(size(A), indCinA) ||
         throw(DimensionMismatch("non-matching sizes while adding arrays"))
 
-    β == one(β) || LinearAlgebra.lmul!(β, C);
+    β == one(β) || (iszero(β) ? _zero!(C) : LinearAlgebra.lmul!(β, C))
     for (IA, vA) in A.data
         IC = CartesianIndex(TupleTools.getindices(IA.I, indCinA))
         C[IC] += α* (CA == :C ? conj(vA) : vA)
@@ -40,8 +40,7 @@ function trace!(α, A::SparseArray{<:Any, NA}, CA::Symbol, β, C::SparseArray{<:
     sizeC == TupleTools.getindices(sizeA, indCinA) ||
         throw(DimensionMismatch("non-matching sizes"))
 
-    β == one(β) || LinearAlgebra.lmul!(β, C);
-
+    β == one(β) || (iszero(β) ? _zero!(C) : LinearAlgebra.lmul!(β, C))
     for (IA, v) in A.data
         IAc1 = CartesianIndex(TupleTools.getindices(IA.I, cindA1))
         IAc2 = CartesianIndex(TupleTools.getindices(IA.I, cindA2))
@@ -84,11 +83,11 @@ function contract!(α, A::SparseArray, CA::Symbol, B::SparseArray, CB::Symbol,
     TupleTools.getindices((osizeA..., osizeB...), indCinoAB) == size(C) ||
         throw(DimensionMismatch("non-matching sizes in uncontracted dimensions"))
 
-    β == one(β) || LinearAlgebra.lmul!(β, C);
+    β == one(β) || (iszero(β) ? _zero!(C) : LinearAlgebra.lmul!(β, C))
 
-    keysA = sort!(collect(NonZeroIndices(A)),
+    keysA = sort!(collect(nonzero_keys(A)),
                     by = IA->CartesianIndex(TupleTools.getindices(IA.I, cindA)))
-    keysB = sort!(collect(NonZeroIndices(B)),
+    keysB = sort!(collect(nonzero_keys(B)),
                     by = IB->CartesianIndex(TupleTools.getindices(IB.I, cindB)))
 
     iA = iB = 1
