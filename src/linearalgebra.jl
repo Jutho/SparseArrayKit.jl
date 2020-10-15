@@ -27,6 +27,7 @@ function Base.one(x::SparseArray{<:Any,2})
     @inbounds for i = 1:m
         u[i,i] = one(eltype(x))
     end
+    return u
 end
 
 # comparison

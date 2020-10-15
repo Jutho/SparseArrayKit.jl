@@ -153,6 +153,13 @@ end
 function SparseArray(A::Adjoint{T,<:SparseArray{T,2}}) where T
     B = SparseArray{T}(undef, size(A))
     for (I, v) in parent(A).data
+        B[I[2], I[1]] = conj(v)
+    end
+    return B
+end
+function SparseArray(A::Transpose{T,<:SparseArray{T,2}}) where T
+    B = SparseArray{T}(undef, size(A))
+    for (I, v) in parent(A).data
         B[I[2], I[1]] = v
     end
     return B

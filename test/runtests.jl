@@ -26,6 +26,10 @@ end
     ar = randn_sparse(arraytype{Float64}, dims)
     ac = randn_sparse(arraytype{ComplexF64}, dims)
 
+    slice = (1:rand(1:dims[1]), rand(1:dims[2]), rand(1:dims[3]):dims[3], rand(1:dims[4]))
+    @test ar[slice...] == Array(ar)[slice...]
+
+
     α = randn(ComplexF64)
     β = randn(Float64)
     γ = 2
@@ -34,6 +38,8 @@ end
     @test @constinferred(γ*ar) == γ*Array(ar)
     @test @constinferred(ac*β) == Array(ac)*β
     @test @constinferred(ar + ac) == Array(ar) + Array(ac)
+    @test @constinferred(ac - ar) == Array(ac) - Array(ar)
+    @test @constinferred(zero(ar)) + ac == ac
 
     @test norm(ar + @constinferred(α*ar)) ≈ norm(ar)*abs(1+α)
     @test @constinferred(norm(ac + ac*α)) ≈ norm(ac)*abs(1+α)
@@ -63,8 +69,9 @@ end
 
 @timedtestset "Basic matrix algebra"  for arraytype in (SparseCOOArray, SparseDOKArray)
     using SparseArrays
-    a = sprandn(ComplexF64, 100, 100, 0.1)
-    b = sprandn(100, 100, 0.1)
+    N = 100
+    a = sprandn(ComplexF64, N, N, 0.1)
+    b = sprandn(N, N, 0.1)
     aa = @constinferred(arraytype(a))
     bb = arraytype(b)
     @test aa == a
@@ -75,6 +82,11 @@ end
     @test aa'*bb ≈ Array(aa)'*Array(bb)
     @test aa'*bb' ≈ Array(aa)'*Array(bb)'
     @test aa*bb' ≈ Array(aa)*Array(bb)'
+    @test @constinferred(one(aa)) == one(Array(aa))
+    @test norm(one(aa)) ≈ sqrt(N)
+    @test one(aa) + zero(aa) == one(bb)
+    @test adjoint!(copy(aa), bb) == SparseArray(adjoint(bb)) == adjoint(Array(bb))
+    @test transpose!(copy(aa), bb) == SparseArray(transpose(bb)) == transpose(Array(bb))
 end
 
 @timedtestset "random contractions" for (eltype,arraytype) in
