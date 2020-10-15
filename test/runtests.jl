@@ -42,17 +42,39 @@ end
     @test ac/β ≈ β\ac;
     @test norm(ac/γ) ≈ norm(ac)/abs(γ);
     @test norm(ac) ≈ sqrt(real(@constinferred(dot(ac, ac))))
+    @test @constinferred(dot(ac, ar)) ≈ dot(Array(ac), Array(ar))
+    @test dot(ar, ac) ≈ conj(dot(ac, ar))
 
     @test @constinferred(lmul!(β, copy(ar))) == β * ar == β * Array(ar)
     @test @constinferred(rmul!(copy(ac), α)) == ac * α == Array(ac) * α
     @test @constinferred(rmul!(copy(ac), β)) == ac * β == Array(ac) * β
+    @test @constinferred(ldiv!(β, copy(ar))) == ldiv!(β, Array(ar)) ≈ β \ ar
+    @test @constinferred(rdiv!(copy(ac), α)) == rdiv!(Array(ac), α) ≈ ac / α
+    @test @constinferred(rdiv!(copy(ac), β)) == rdiv!(Array(ac), β) ≈ ac / β
     @test_throws InexactError rmul!(copy(ar), α)
+    @test_throws InexactError ldiv!(α, copy(ar))
 
     p = randperm(MAX_LEGS)
     @test permutedims(ar, p) == permutedims(Array(ar), p)
 
     @test @constinferred(axpy!(α, copy(ar), copy(ac))) == α * ar + ac
     @test @constinferred(axpby!(α, copy(ar), β, copy(ac))) == α * ar + β * ac
+end
+
+@timedtestset "Basic matrix algebra"  for arraytype in (SparseCOOArray, SparseDOKArray)
+    using SparseArrays
+    a = sprandn(ComplexF64, 100, 100, 0.1)
+    b = sprandn(100, 100, 0.1)
+    aa = @constinferred(arraytype(a))
+    bb = arraytype(b)
+    @test aa == a
+    @test @constinferred(aa * bb) ≈ arraytype(a * b)
+    @test aa * bb ≈ Array(aa) * Array(bb)
+    @test adjoint(aa) == adjoint(Array(aa))
+    @test transpose(aa) == transpose(Array(aa))
+    @test aa'*bb ≈ Array(aa)'*Array(bb)
+    @test aa'*bb' ≈ Array(aa)'*Array(bb)'
+    @test aa*bb' ≈ Array(aa)*Array(bb)'
 end
 
 @timedtestset "random contractions" for (eltype,arraytype) in Any[(ComplexF64,SparseCOOArray),
