@@ -56,6 +56,49 @@ Base.@propagate_inbounds Base.setindex!(a::SparseArray{T,N},
                                         v, I::Vararg{Int,N}) where {T,N} =
                                             setindex!(a, v, CartesianIndex(I))
 
+@inline function increaseindex!(a::SparseDOKArray{T,N}, v, I::CartesianIndex{N}) where {T,N}
+    @boundscheck checkbounds(a, I)
+    iszero(v) && return
+    h = a.data
+    index = Base.ht_keyindex2!(h, I)
+    if index > 0
+        currentv = h.vals[index]
+        newv = currentv + convert(T, v)
+        if iszero(newv)
+            Base._delete!(h, index)
+        else
+            h.age += 1
+            @inbounds h.keys[index] = I
+            @inbounds h.vals[index] = newv
+        end
+    else
+        newv = convert(T, v)
+        @inbounds Base._setindex!(h, newv, I, -index)
+    end
+    return newv
+end
+@inline function increaseindex!(a::SparseCOOArray{T,N}, v, I::CartesianIndex{N}) where {T,N}
+    @boundscheck checkbounds(a, I)
+    iszero(v) && return
+    d = a.data
+    i = _searchsortedfirst(d.keys, I)
+    if i <= length(d) && isequal(d.keys[i], I)
+        currentv = d.vals[i]
+        newv = currentv + convert(T, v)
+        if iszero(newv)
+            deleteat!(d.vals, i)
+            deleteat!(d.keys, i)
+        else
+            d.vals[i] = newv
+        end
+    else
+        newv = convert(T, v)
+        insert!(d.keys, i, I)
+        insert!(d.vals, i, newv)
+    end
+    return newv
+end
+
 # following code is used to index with ranges etc
 _newindex(i::Int, range::Int) = i == range ? () : nothing
 function _newindex(i::Int, range::AbstractVector{Int})

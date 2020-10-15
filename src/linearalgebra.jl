@@ -34,14 +34,22 @@ function Base.:(==)(x::SparseArray, y::SparseArray)
     return true
 end
 
-# TODO
-# Base.permutedims!
-# LinearAlgebra.mul!
-# LinearAlgebra.adjoint!
-# LinearAlgebra.transpose!
-
 # Vector space functions
 #------------------------
+function LinearAlgebra.mul!(dst::SparseArray, a::Number, src::SparseArray)
+    _zero!(dst)
+    for (k, v) in nonzero_pairs(src)
+        dst[k] = a*v
+    end
+    return dst
+end
+function LinearAlgebra.mul!(dst::SparseArray, src::SparseArray, a::Number)
+    _zero!(dst)
+    for (k, v) in nonzero_pairs(src)
+        dst[k] = v*a
+    end
+    return dst
+end
 function LinearAlgebra.lmul!(a::Number, x::SparseArray)
     lmul!(a, x.data.vals)
     # typical occupation in a dict is about 30% from experimental testing
@@ -63,13 +71,13 @@ end
 function LinearAlgebra.axpby!(α, x::SparseArray, β, y::SparseArray)
     β == one(β) || (iszero(β) ? _zero!(y) : LinearAlgebra.lmul!(β, y))
     for (k, v) in nonzero_pairs(x)
-        y[k] += α*v
+        increaseindex!(y, α*v, k)
     end
     return y
 end
 function LinearAlgebra.axpy!(α, x::SparseArray, y::SparseArray)
     for (k, v) in nonzero_pairs(x)
-        y[k] += α*v
+        increaseindex!(y, α*v, k)
     end
     return y
 end
@@ -91,4 +99,39 @@ function LinearAlgebra.dot(x::SparseArray, y::SparseArray)
         end
     end
     return s
+end
+
+# permutedims
+Base.permutedims!(dst::SparseArray, src::SparseArray, p) =
+    add!(one(eltype(dst)), src, :N, zero(eltype(dst)), dst, tuple(p...))
+
+# matrix functions
+const SV{T} = SparseArray{T,1}
+const SM{T} = SparseArray{T, 2}
+const ASM{T} = Union{SparseArray{T, 2},
+                    Transpose{T, <:SparseArray{T,2}},
+                    Adjoint{T, <:SparseArray{T,2}}}
+
+LinearAlgebra.mul!(C::SM, A::ASM, B::ASM) = mul!(C, A, B, one(eltype(C)), zero(eltype(C)))
+function LinearAlgebra.mul!(C::SM, A::ASM, B::ASM, α::Number, β::Number)
+    CA = A isa Adjoint ? :C : :N
+    CB = B isa Adjoint ? :C : :N
+    oindA = A isa Union{Adjoint,Transpose} ? (2,) : (1,)
+    cindA = A isa Union{Adjoint,Transpose} ? (1,) : (2,)
+    oindB = B isa Union{Adjoint,Transpose} ? (1,) : (2,)
+    cindB = B isa Union{Adjoint,Transpose} ? (2,) : (1,)
+
+    AA = A isa Union{Adjoint,Transpose} ? parent(A) : A
+    BB = B isa Union{Adjoint,Transpose} ? parent(B) : B
+
+    contract!(α, AA, CA, BB, CB, β, C, oindA, cindA, oindB, cindB, (1, 2))
+end
+
+function LinearAlgebra.adjoint!(C::SM, A::SM)
+    add!(one(eltype(C)), A, :C, zero(eltype(C)), C, (2, 1))
+    return C
+end
+function LinearAlgebra.transpose!(C::SM, A::SM)
+    add!(one(eltype(C)), A, :N, zero(eltype(C)), C, (2, 1))
+    return C
 end
