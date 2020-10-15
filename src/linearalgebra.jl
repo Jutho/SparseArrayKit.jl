@@ -1,10 +1,18 @@
+
 # Basic arithmetic
-Base.:*(a::Number, x::SparseArray) = LinearAlgebra.lmul!(a, copy(x))
-Base.:*(x::SparseArray, a::Number) = LinearAlgebra.rmul!(copy(x), a)
-Base.:\(a::Number, x::SparseArray) = LinearAlgebra.ldiv!(a, copy(x))
-Base.:/(x::SparseArray, a::Number) = LinearAlgebra.rdiv!(copy(x), a)
-Base.:+(x::SparseArray, y::SparseArray) = LinearAlgebra.axpy!(+1, y, copy(x))
-Base.:-(x::SparseArray, y::SparseArray) = LinearAlgebra.axpy!(-1, y, copy(x))
+Base.:*(a::Number, x::SparseArray) =
+    mul!(similar(x, Base.promote_eltypeof(a, x)), a, x)
+Base.:*(x::SparseArray, a::Number) =
+    mul!(similar(x, Base.promote_eltypeof(a, x)), x, a)
+Base.:\(a::Number, x::SparseArray) =
+    mul!(similar(x, Base.promote_eltypeof(a, x)), inv(a), x)
+Base.:/(x::SparseArray, a::Number) =
+    mul!(similar(x, Base.promote_eltypeof(a, x)), x, inv(a))
+Base.:+(x::SparseArray, y::SparseArray) =
+    (T = Base.promote_eltypeof(x, y); axpy!(+one(T), y, copy!(similar(x, T), x)))
+Base.:-(x::SparseArray, y::SparseArray) =
+    (T = Base.promote_eltypeof(x, y); axpy!(-one(T), y, copy!(similar(x, T), x)))
+
 Base.:-(x::SparseArray) = LinearAlgebra.lmul!(-one(eltype(x)), copy(x))
 
 Base.zero(x::SparseArray) = similar(x)

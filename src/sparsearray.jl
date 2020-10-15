@@ -170,6 +170,7 @@ function Base.copy!(dst::SparseArray, src::SparseArray)
     for (I, v) in nonzero_pairs(src)
         dst[I] = v
     end
+    return dst
 end
 
 Base.similar(a::SparseCOOArray, ::Type{S}, dims::Dims{N}) where {S,N} =

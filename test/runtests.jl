@@ -1,10 +1,61 @@
-using SparseArrayKit,Test,TestExtras,LinearAlgebra
-import TensorOperations;
+using SparseArrayKit
+using Test, TestExtras, LinearAlgebra, Random
+import TensorOperations
 
 #=
 generate a whole bunch of random contractions, compare with the dense result
 =#
-@timedtestset "random contractions" for (eltype,arraytype) in [(ComplexF64,SparseCOOArray),
+function randn_sparse(S::Type{<:SparseArray}, sz::Dims, p = 0.5)
+    a = S(undef, sz)
+    T = eltype(a)
+    for I in keys(a)
+        if rand() < p
+            a[I] = randn(T)
+        end
+    end
+    return a
+end
+
+
+
+@timedtestset "Basic linear algebra"  for arraytype in (SparseCOOArray, SparseDOKArray)
+    MAX_DIM = 20;
+    MAX_LEGS = 4;
+
+    dims = ntuple(l->rand(1:MAX_DIM), MAX_LEGS)
+    ar = randn_sparse(arraytype{Float64}, dims)
+    ac = randn_sparse(arraytype{ComplexF64}, dims)
+
+    α = randn(ComplexF64)
+    β = randn(Float64)
+    γ = 2
+    @test @constinferred(α*ar) == α*Array(ar)
+    @test @constinferred(β*ar) == β*Array(ar)
+    @test @constinferred(γ*ar) == γ*Array(ar)
+    @test @constinferred(ac*β) == Array(ac)*β
+    @test @constinferred(ar + ac) == Array(ar) + Array(ac)
+
+    @test norm(ar + @constinferred(α*ar)) ≈ norm(ar)*abs(1+α)
+    @test @constinferred(norm(ac + ac*α)) ≈ norm(ac)*abs(1+α)
+    @test ar*α ≈ α*ar
+    @test norm(ar*α) ≈ norm(ar)*abs(α);
+    @test ac/β ≈ β\ac;
+    @test norm(ac/γ) ≈ norm(ac)/abs(γ);
+    @test norm(ac) ≈ sqrt(real(@constinferred(dot(ac, ac))))
+
+    @test @constinferred(lmul!(β, copy(ar))) == β * ar == β * Array(ar)
+    @test @constinferred(rmul!(copy(ac), α)) == ac * α == Array(ac) * α
+    @test @constinferred(rmul!(copy(ac), β)) == ac * β == Array(ac) * β
+    @test_throws InexactError rmul!(copy(ar), α)
+
+    p = randperm(MAX_LEGS)
+    @test permutedims(ar, p) == permutedims(Array(ar), p)
+
+    @test @constinferred(axpy!(α, copy(ar), copy(ac))) == α * ar + ac
+    @test @constinferred(axpby!(α, copy(ar), β, copy(ac))) == α * ar + β * ac
+end
+
+@timedtestset "random contractions" for (eltype,arraytype) in Any[(ComplexF64,SparseCOOArray),
                                                                 (Float64,SparseDOKArray)]
 
     MAX_CONTRACTED_INDICES = 10;
@@ -45,9 +96,9 @@ generate a whole bunch of random contractions, compare with the dense result
                 end
             end
 
-            push!(tensors,arraytype(rand(eltype,cur_dims...)))
-            push!(indices,cur_inds);
-            push!(conjlist,rand([true,false]));
+            push!(tensors, randn_sparse(arraytype{eltype}, tuple(cur_dims...)))
+            push!(indices, cur_inds);
+            push!(conjlist, rand([true,false]));
         end
 
         length(tensors) == 1 && continue # very rare - but possible
@@ -59,54 +110,30 @@ generate a whole bunch of random contractions, compare with the dense result
     end
 end
 
-@timedtestset "Basic linear algebra"  for (eltype,arraytype) in [(ComplexF64,SparseCOOArray),
-                                                                (Float64,SparseDOKArray)]
-    MAX_DIM = 5;
-    MAX_LEGS = 5;
-
-    dims = [rand(1:MAX_DIM) for l in 1:MAX_LEGS];
-
-    arr = arraytype(rand(eltype,dims...));
-
-    T = typeof(arr);
-
-    @test isa(arr*2,T);
-    @test isa(2*arr,T);
-    @test isa(arr+arr,T);
-
-    a = randn(eltype);
-    @test norm(arr + a*arr) ≈ norm(arr)*abs(1+a);
-    @test norm(arr + arr*a) ≈ norm(arr)*abs(1+a);
-    @test arr*a ≈ a*arr;
-    @test norm(a*arr) ≈ norm(arr)*abs(a);
-    @test arr/a ≈ a\arr;
-    @test norm(arr/a) ≈ norm(arr)/abs(a);
-    @test norm(arr) ≈ sqrt(real(dot(arr,arr)))
-
-    old_norm = norm(arr);
-    lmul!(a,arr);
-    @test old_norm*abs(a) ≈ norm(arr);
-    ldiv!(a,arr);
-    @test old_norm ≈ norm(arr);
-
-    old_norm = norm(arr);
-    a = randn(eltype);
-    rmul!(arr,a);
-    @test old_norm*abs(a) ≈ norm(arr);
-    rdiv!(arr,a);
-    @test old_norm ≈ norm(arr);
-
-    brr = arraytype(rand(eltype,dims...));
-    @test arr + brr ≈ brr + arr
-    @test dot(arr,brr) ≈ dot(brr,arr)'
-
-    b = randn(eltype);
-
-    c = a*arr+brr
-    axpy!(a,arr,brr)
-    @test brr ≈ c
-
-    c = a*arr+b*brr
-    axpby!(a,arr,b,brr)
-    @test brr ≈ c
-end
+#
+#
+# @test old_norm*abs(a) ≈ norm(arr);
+#     ldiv!(a,arr);
+#     @test old_norm ≈ norm(arr);
+#
+#     old_norm = norm(arr);
+#     a = randn(eltype);
+#     rmul!(arr,a);
+#     @test old_norm*abs(a) ≈ norm(arr);
+#     rdiv!(arr,a);
+#     @test old_norm ≈ norm(arr);
+#
+#     brr = arraytype(rand(eltype,dims...));
+#     @test arr + brr ≈ brr + arr
+#     @test dot(arr,brr) ≈ dot(brr,arr)'
+#
+#     b = randn(eltype);
+#
+#     c = a*arr+brr
+#     axpy!(a,arr,brr)
+#     @test brr ≈ c
+#
+#     c = a*arr+b*brr
+#     axpby!(a,arr,b,brr)
+#     @test brr ≈ c
+# end
