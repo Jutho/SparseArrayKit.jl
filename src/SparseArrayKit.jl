@@ -6,10 +6,9 @@ using Requires
 
 const IndexTuple{N} = NTuple{N,Int}
 
-export SparseArray, SparseDOKArray, SparseCOOArray
+export SparseArray
 export nonzero_pairs, nonzero_keys, nonzero_values, nonzero_length
 
-include("sortedvectordict.jl")
 include("sparsearray.jl")
 include("linearalgebra.jl")
 include("tensoroperations.jl")
@@ -37,10 +36,9 @@ function __init__()
     @require SparseArrays="2f01184e-e22b-5df5-ae63-d93ebab69eaf" begin
         using .SparseArrays: SparseMatrixCSC, nonzeros, rowvals, nzrange
         Base.convert(T::Type{<:SparseArray}, a::SparseMatrixCSC) = T(a)
-        SparseArray(a::SparseMatrixCSC) = SparseDOKArray{eltype(a)}(a)
-        SparseDOKArray(a::SparseMatrixCSC) = SparseDOKArray{eltype(a)}(a)
-        function SparseDOKArray{T}(a::SparseMatrixCSC) where T
-            b = SparseDOKArray{T}(undef, size(a))
+        SparseArray(a::SparseMatrixCSC) = SparseArray{eltype(a)}(a)
+        function SparseArray{T}(a::SparseMatrixCSC) where T
+            b = SparseArray{T}(undef, size(a))
             rv = rowvals(a)
             nzv = nonzeros(a)
             @inbounds for col = 1:size(a, 2)

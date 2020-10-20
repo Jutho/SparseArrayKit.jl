@@ -1,36 +1,22 @@
-Base.@pure defaultdict(N::Int, T::Type) = Dict{CartesianIndex{N}, T}
-# Base.@pure defaultdict(N::Int, T::Type) = SortedVectorDict{CartesianIndex{N}, T}
-
-struct SparseArray{T,N,A<:AbstractDict{CartesianIndex{N},T}} <: AbstractArray{T,N}
-    data::A
+# simple wrapper to give indices a custom wrapping behaviour
+struct SparseArray{T,N} <: AbstractArray{T,N}
+    data::Dict{CartesianIndex{N},T}
     dims::NTuple{N,Int64}
-    function SparseArray{T,N,A}(::UndefInitializer, dims::Dims{N}) where {T,N,A}
-        return new{T,N,A}(A(), dims)
+    function SparseArray{T,N}(::UndefInitializer, dims::Dims{N}) where {T,N}
+        return new{T,N}(Dict{CartesianIndex{N},T}(), dims)
     end
     function SparseArray(a::SparseArray{T,N}) where {T,N}
-        data = copy(a.data)
-        A = typeof(data)
-        new{T,N,A}(data, a.dims)
+        new{T,N}(copy(a.data), a.dims)
     end
 end
-SparseArray{T,N}(::UndefInitializer, dims::Dims{N}) where {T,N} =
-    SparseArray{T,N,defaultdict(N,T)}(undef, dims)
 SparseArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N} =
-    SparseArray{T,N,defaultdict(N,T)}(undef, dims)
+    SparseArray{T,N}(undef, dims)
 SparseArray{T}(::UndefInitializer, dims...) where {T} = SparseArray{T}(undef, dims)
 
-const SparseDOKArray{T,N} = SparseArray{T,N,Dict{CartesianIndex{N},T}}
-const SparseCOOArray{T,N} = SparseArray{T,N,SortedVectorDict{CartesianIndex{N},T}}
-
-SparseDOKArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N} =
-    SparseDOKArray{T,N}(undef, dims)
-SparseCOOArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N} =
-    SparseCOOArray{T,N}(undef, dims)
-
-nonzero_pairs(a::SparseArray) = a.data
-nonzero_keys(a::SparseArray) = keys(nonzero_pairs(a))
-nonzero_values(a::SparseArray) = values(nonzero_pairs(a))
-nonzero_length(a::SparseArray) = length(nonzero_pairs(a))
+nonzero_pairs(a::SparseArray) = pairs(a.data)
+nonzero_keys(a::SparseArray) = keys(a.data)
+nonzero_values(a::SparseArray) = values(a.data)
+nonzero_length(a::SparseArray) = length(a.data)
 
 _zero!(x::SparseArray) = empty!(x.data)
 _sizehint!(x::SparseArray, n) = sizehint!(x.data, n)
@@ -48,7 +34,7 @@ Base.@propagate_inbounds Base.getindex(a::SparseArray{T,N}, I::Vararg{Int,N}) wh
     if v != zero(v)
         a.data[I] = v
     else
-        delete!(a.data, I) # does not do anything if there was no key I
+        delete!(a.data, I) # does not do anything if there was no key corresponding to I
     end
     return v
 end
@@ -56,45 +42,26 @@ Base.@propagate_inbounds Base.setindex!(a::SparseArray{T,N},
                                         v, I::Vararg{Int,N}) where {T,N} =
                                             setindex!(a, v, CartesianIndex(I))
 
-@inline function increaseindex!(a::SparseDOKArray{T,N}, v, I::CartesianIndex{N}) where {T,N}
+@inline function increaseindex!(a::SparseArray{T,N}, v, I::CartesianIndex{N}) where {T,N}
     @boundscheck checkbounds(a, I)
     iszero(v) && return
     h = a.data
     index = Base.ht_keyindex2!(h, I)
-    if index > 0
-        currentv = h.vals[index]
-        newv = currentv + convert(T, v)
-        if iszero(newv)
-            Base._delete!(h, index)
+    @inbounds begin
+        if index > 0
+            currentv = h.vals[index]
+            newv = currentv + convert(T, v)
+            if iszero(newv)
+                Base._delete!(h, index)
+            else
+                h.age += 1
+                h.keys[index] = I
+                h.vals[index] = newv
+            end
         else
-            h.age += 1
-            @inbounds h.keys[index] = I
-            @inbounds h.vals[index] = newv
+            newv = convert(T, v)
+            Base._setindex!(h, newv, I, -index)
         end
-    else
-        newv = convert(T, v)
-        @inbounds Base._setindex!(h, newv, I, -index)
-    end
-    return newv
-end
-@inline function increaseindex!(a::SparseCOOArray{T,N}, v, I::CartesianIndex{N}) where {T,N}
-    @boundscheck checkbounds(a, I)
-    iszero(v) && return
-    d = a.data
-    i = _searchsortedfirst(d.keys, I)
-    if i <= length(d) && isequal(d.keys[i], I)
-        currentv = d.vals[i]
-        newv = currentv + convert(T, v)
-        if iszero(newv)
-            deleteat!(d.vals, i)
-            deleteat!(d.keys, i)
-        else
-            d.vals[i] = newv
-        end
-    else
-        newv = convert(T, v)
-        insert!(d.keys, i, I)
-        insert!(d.vals, i, newv)
     end
     return newv
 end
@@ -139,10 +106,9 @@ function Base.Array{T,N}(a::SparseArray) where {T,N}
 end
 
 SparseArray(a::AbstractArray{T,N}) where {T,N} = SparseArray{T,N}(a)
-SparseCOOArray(a::AbstractArray{T,N}) where {T,N} = SparseCOOArray{T,N}(a)
-SparseDOKArray(a::AbstractArray{T,N}) where {T,N} = SparseDOKArray{T,N}(a)
-function (::Type{S})(a::AbstractArray) where {S<:SparseArray}
-    d = S(undef, size(a))
+SparseArray{T}(a::AbstractArray{<:Any,N}) where {T,N} = SparseArray{T,N}(a)
+function SparseArray{T,N}(a::AbstractArray{<:Any,N}) where {T,N}
+    d = SparseArray{T,N}(undef, size(a))
     for I in CartesianIndices(a)
         iszero(a[I]) && continue
         d[I] = a[I]
@@ -180,9 +146,5 @@ function Base.copy!(dst::SparseArray, src::SparseArray)
     return dst
 end
 
-Base.similar(a::SparseCOOArray, ::Type{S}, dims::Dims{N}) where {S,N} =
-    SparseCOOArray{S}(undef, dims)
-Base.similar(a::SparseDOKArray, ::Type{S}, dims::Dims{N}) where {S,N} =
-    SparseDOKArray{S}(undef, dims)
 Base.similar(a::SparseArray, ::Type{S}, dims::Dims{N}) where {S,N} =
     SparseArray{S}(undef, dims)
