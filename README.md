@@ -10,28 +10,24 @@ nor a competitor to Julia's `SparseArrays` standard library and the `SparseMatri
 format.
 
 The current interface, which is subject to breaking changes, exports a type
-`SparseArray{T,N,A} <: AbstractArray{T,N}`. Here, `A` is a type parameter for the underlying
-storage format. There are two type aliases which give a concrete implementation to `A`. The
-type `SparseDOKArray{T,N}` uses a hash table (`Dict` from Julia's `Base`, could change) to
-store keys (of type `CartesianIndex{N}`) and values (of type `T`) of the non-zero data, and
-is thus supposed to have O(1) access time for getting and setting individual values. The
-type `SparseCOOArray{T,N}` uses an internally defined `SortedVectorDict`, which stores keys
-and values of nonzero data in two matching vectors, such that the keys are sorted and
-individual keys (and matching values) can be obtained in time `O(log L)`, with `L` the
-number of nonzero entries. This format could potentially enable certain optimizations for
-global array operations, though none are currently in place, and `SparseDOKArray` is the
-preferred format. Indeed, the constructor `SparseArray{T}(undef, dims)` creates a
-`SparseDOKArray`.
+`SparseArray{T,N} <: AbstractArray{T,N}`. This type uses a hash table (`Dict` from Julia's 
+`Base`, could change) to store keys (of type `CartesianIndex{N}`) and values (of type `T`)
+of the non-zero data (i.e. a dictionary-of-keys storage format), and is thus supposed to
+have O(1) access time for getting and setting individual values. Other storage formats for
+sparse arrays could in the future be experimented with.
 
 `SparseArray` instances have a number of method definitions, mostly indexing, basic
 arithmetic and methods from the `LinearAlgebra` standard library. Aside from matrix
 multiplication, there are no specific matrix methods (such as matrix factorizations) and you
 are probably better of with `SparseMatrixCSC` from `SparseArrays` if your problem can be
-cast in terms of matrices and vectors. Objects of type `SparseArray` are fully compatible
-with the interface from [TensorOperations.jl](https://github.com/Jutho/TensorOperations.jl),
-and thus with the `@tensor` macro for multidimensional tensor contractions.
+cast in terms of matrices and vectors. There is a fast conversion path from
+`SparseMatrixCSC` to `SparseArray` (but not yet the other way around).
 
-here are only three new methods exported by this package, which are `nonzero_keys`,
+Objects of type `SparseArray` are fully compatible with the interface from
+[TensorOperations.jl](https://github.com/Jutho/TensorOperations.jl), and thus with the
+`@tensor` macro for multidimensional tensor contractions.
+
+There are only three new methods exported by this package, which are `nonzero_keys`,
 `nonzero_values` and `nonzero_pairs` wich export iterators (not necessarily editable or
 indexable vectors) over the keys, values and key-value pairs of the nonzero entries of the
 array. These can be used to define new optimized methods.
