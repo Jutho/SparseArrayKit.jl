@@ -37,6 +37,7 @@ end
     @test @constinferred(ar + ac) == Array(ar) + Array(ac)
     @test @constinferred(ac - ar) == Array(ac) - Array(ar)
     @test @constinferred(zero(ar)) + ac == ac
+    @test ac == convert(SparseArray, Array(ac))
 
     @test norm(ar + @constinferred(α*ar)) ≈ norm(ar)*abs(1+α)
     @test @constinferred(norm(ac + ac*α)) ≈ norm(ac)*abs(1+α)
