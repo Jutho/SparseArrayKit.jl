@@ -115,6 +115,7 @@ function SparseArray{T,N}(a::AbstractArray{<:Any,N}) where {T,N}
     end
     return d
 end
+Base.convert(::Type{S}, a::S) where {S<:SparseArray} = a
 Base.convert(S::Type{<:SparseArray}, a::AbstractArray) = S(a)
 
 function SparseArray(A::Adjoint{T,<:SparseArray{T,2}}) where T
