@@ -54,6 +54,7 @@ end
     @test @constinferred(ldiv!(β, copy(ar))) == ldiv!(β, Array(ar)) ≈ β \ ar
     @test @constinferred(rdiv!(copy(ac), α)) == rdiv!(Array(ac), α) ≈ ac / α
     @test @constinferred(rdiv!(copy(ac), β)) == rdiv!(Array(ac), β) ≈ ac / β
+    @test @constinferred(conj!(copy(ac))) == conj!(Array(ac))
     @test_throws InexactError rmul!(copy(ar), α)
     @test_throws InexactError ldiv!(α, copy(ar))
 

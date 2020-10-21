@@ -45,6 +45,10 @@ end
 
 # Vector space functions
 #------------------------
+function Base.conj!(x::SparseArray)
+    conj!(x.data.vals)
+    return x
+end
 function LinearAlgebra.mul!(dst::SparseArray, a::Number, src::SparseArray)
     _zero!(dst)
     for (k, v) in nonzero_pairs(src)
