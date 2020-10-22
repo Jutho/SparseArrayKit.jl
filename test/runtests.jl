@@ -36,6 +36,9 @@ end
     @test @constinferred(ac*β) == Array(ac)*β
     @test @constinferred(ar + ac) == Array(ar) + Array(ac)
     @test @constinferred(ac - ar) == Array(ac) - Array(ar)
+    mar = @constinferred(-ar)
+    @test !(mar == ar)
+    @test iszero(ar + mar)
     @test @constinferred(zero(ar)) + ac == ac
     @test ac == convert(SparseArray, Array(ac))
 
