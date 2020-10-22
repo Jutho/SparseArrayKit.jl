@@ -37,8 +37,10 @@ end
     @test @constinferred(ar + ac) == Array(ar) + Array(ac)
     @test @constinferred(ac - ar) == Array(ac) - Array(ar)
     mar = @constinferred(-ar)
-    @test !(mar == ar)
     @test iszero(ar + mar)
+    ar2 = copy(ar)
+    ar2[first(nonzero_keys(ar2))] = 0
+    @test !(ar2 == ar)
     @test @constinferred(zero(ar)) + ac == ac
     @test ac == convert(SparseArray, Array(ac))
 
