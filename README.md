@@ -19,7 +19,7 @@ sparse arrays could in the future be experimented with.
 `SparseArray` instances have a number of method definitions, mostly indexing, basic
 arithmetic and methods from the `LinearAlgebra` standard library. Aside from matrix
 multiplication, there are no specific matrix methods (such as matrix factorizations) and you
-are probably better of with `SparseMatrixCSC` from `SparseArrays` if your problem can be
+are probably better off with `SparseMatrixCSC` from `SparseArrays` if your problem can be
 cast in terms of matrices and vectors. There is a fast conversion path from
 `SparseMatrixCSC` to `SparseArray` (but not yet the other way around).
 
@@ -28,6 +28,6 @@ Objects of type `SparseArray` are fully compatible with the interface from
 `@tensor` macro for multidimensional tensor contractions.
 
 There are only three new methods exported by this package, which are `nonzero_keys`,
-`nonzero_values` and `nonzero_pairs` wich export iterators (not necessarily editable or
+`nonzero_values` and `nonzero_pairs` which export iterators (not necessarily editable or
 indexable vectors) over the keys, values and key-value pairs of the nonzero entries of the
 array. These can be used to define new optimized methods.
