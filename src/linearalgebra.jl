@@ -81,14 +81,14 @@ function LinearAlgebra.rdiv!(x::SparseArray, a::Number)
     rdiv!(x.data.vals, a)
     return x
 end
-function LinearAlgebra.axpby!(α, x::SparseArray, β, y::SparseArray)
+function LinearAlgebra.axpby!(α::Number, x::SparseArray, β, y::SparseArray)
     β == one(β) || (iszero(β) ? _zero!(y) : LinearAlgebra.lmul!(β, y))
     for (k, v) in nonzero_pairs(x)
         increaseindex!(y, α*v, k)
     end
     return y
 end
-function LinearAlgebra.axpy!(α, x::SparseArray, y::SparseArray)
+function LinearAlgebra.axpy!(α::Number, x::SparseArray, y::SparseArray)
     for (k, v) in nonzero_pairs(x)
         increaseindex!(y, α*v, k)
     end
