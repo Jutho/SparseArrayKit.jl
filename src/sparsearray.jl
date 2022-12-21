@@ -31,7 +31,7 @@ Base.@propagate_inbounds Base.getindex(a::SparseArray{T,N}, I::Vararg{Int,N}) wh
 
 @inline function Base.setindex!(a::SparseArray{T,N}, v, I::CartesianIndex{N}) where {T,N}
     @boundscheck checkbounds(a, I)
-    if v != zero(v)
+    if !iszero(v)
         a.data[I] = v
     else
         delete!(a.data, I) # does not do anything if there was no key corresponding to I
