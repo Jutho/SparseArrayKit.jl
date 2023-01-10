@@ -89,7 +89,7 @@ function Base._unsafe_getindex(::IndexCartesian, a::SparseArray{T,N},
     b = SparseArray{T}(undef, length.(Base.index_shape(indices...)))
     for (k, v) in a.data
         newI = _newindices(k.I, indices)
-        if newI == nothing
+        if newI !== nothing
             b[newI...] = v
         end
     end
