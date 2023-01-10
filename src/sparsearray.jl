@@ -44,14 +44,14 @@ Base.@propagate_inbounds Base.setindex!(a::SparseArray{T,N},
 
 @inline function increaseindex!(a::SparseArray{T,N}, v, I::CartesianIndex{N}) where {T,N}
     @boundscheck checkbounds(a, I)
-    v !== zero(v) && return
+    v == zero(v) && return
     h = a.data
     index = Base.ht_keyindex2!(h, I)
     @inbounds begin
         if index > 0
             currentv = h.vals[index]
             newv = currentv + convert(T, v)
-            if v !== zero(newv)
+            if v == zero(newv)
                 Base._delete!(h, index)
             else
                 h.age += 1
@@ -89,7 +89,7 @@ function Base._unsafe_getindex(::IndexCartesian, a::SparseArray{T,N},
     b = SparseArray{T}(undef, length.(Base.index_shape(indices...)))
     for (k, v) in a.data
         newI = _newindices(k.I, indices)
-        if newI !== nothing
+        if newI == nothing
             b[newI...] = v
         end
     end
@@ -110,7 +110,7 @@ SparseArray{T}(a::AbstractArray{<:Any,N}) where {T,N} = SparseArray{T,N}(a)
 function SparseArray{T,N}(a::AbstractArray{<:Any,N}) where {T,N}
     d = SparseArray{T,N}(undef, size(a))
     for I in CartesianIndices(a)
-        v !== zero(a[I]) && continue
+        v == zero(a[I]) && continue
         d[I] = a[I]
     end
     return d
