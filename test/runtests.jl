@@ -1,6 +1,9 @@
 using SparseArrayKit
 using Test, TestExtras, LinearAlgebra, Random
 import TensorOperations
+using Strided
+
+TensorOperations.backend(:Strided)
 
 #=
 generate a whole bunch of random contractions, compare with the dense result
