@@ -150,3 +150,37 @@ end
 
 Base.similar(a::SparseArray, ::Type{S}, dims::Dims{N}) where {S,N} =
     SparseArray{S}(undef, dims)
+
+### show and friends
+
+function Base.show(io::IO, ::MIME"text/plain", x::SparseArray)
+    xnnz = nonzero_length(x)
+    print(io, join(size(x), "×"), " ", typeof(x), " with ", xnnz, " stored ", xnnz == 1 ? "entry" : "entries")
+    if xnnz != 0
+        println(io, ":")
+        show(IOContext(io, :typeinfo => eltype(x)), x)
+    end
+end
+show(io::IO, x::SparseArray) = show(convert(IOContext, io), x)
+function show(io::IOContext, x::SparseArray)
+    nzind = nonzero_keys(x)
+    if isempty(nzind)
+        return show(io, MIME("text/plain"), x)
+    end
+    limit = get(io, :limit, false)::Bool
+    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
+    pads = map(1:ndims(x)) do i
+        return ndigits(maximum(getindex.(nzind, i)))
+    end
+    if !haskey(io, :compact)
+        io = IOContext(io, :compact => true)
+    end
+    for (k, (ind, val)) in enumerate(nonzero_pairs(x))
+        if k < half_screen_rows || k > length(nzind) - half_screen_rows
+            print(io, "  ", '[', join(lpad.(Tuple(ind), pads), ","), "]  =  ", val)
+            k != length(nzind) && println(io)
+        elseif k == half_screen_rows
+            println(io, "   ", join(" ".^pads, " "), "   \u22ee")
+        end
+    end
+end
