@@ -83,7 +83,7 @@ end
 _findfirstvalue(v, r) = findfirst(==(v), r)
 # slicing should produce SparseArray
 function Base._unsafe_getindex(::IndexCartesian, a::SparseArray{T,N},
-                                I::Vararg{<:Union{Int,AbstractVector{Int}},N}) where {T,N}
+                                I::Vararg{Union{Int,AbstractVector{Int}},N}) where {T,N}
     @boundscheck checkbounds(a, I...)
     indices = Base.to_indices(a, I)
     b = SparseArray{T}(undef, length.(Base.index_shape(indices...)))
