@@ -9,10 +9,10 @@ const TO = TensorOperations
 
 using SparseArrayKit: add!, trace!, contract!, SparseArray
 
-function TO.tensoradd!(C::SparseArray,
-                       A::SparseArray, pA::Index2Tuple, conjA::Symbol,
+function TO.tensoradd!(C::SparseArray, pC::Index2Tuple,
+                       A::SparseArray, conjA::Symbol,
                        α::Number, β::Number)
-    return add!(α, A, conjA, β, C, linearize(pA))
+    return add!(α, A, conjA, β, C, linearize(pC))
 end
 
 function TO.tensortrace!(C::SparseArray, pC::Index2Tuple,
@@ -28,7 +28,7 @@ function TO.tensorcontract!(C::SparseArray, pC::Index2Tuple,
     return contract!(α, A, conjA, B, conjB, β, C, pA[1], pA[2], pB[2], pB[1], linearize(pC))
 end
 
-function TO.tensoradd_type(TC, ::SparseArray, pA::Index2Tuple, ::Symbol)
+function TO.tensoradd_type(TC, pA::Index2Tuple, ::SparseArray, ::Symbol)
     return SparseArray{TC,sum(length.(pA))}
 end
 
