@@ -30,6 +30,16 @@ function Base.one(x::SparseArray{<:Any,2})
     return u
 end
 
+function Base.reshape(parent::SparseArray{T}, dims::Dims) where {T}
+    child = SparseArray{T}(undef, dims)
+    lin_inds = LinearIndices(parent)
+    new_cart_inds = CartesianIndices(dims)
+    for (ky, vl) in nonzero_pairs(parent)
+        child[new_cart_inds[lin_inds[ky]]] = vl
+    end
+    return child
+end
+
 # comparison
 function Base.:(==)(x::SparseArray, y::SparseArray)
     keys = collect(nonzero_keys(x))
