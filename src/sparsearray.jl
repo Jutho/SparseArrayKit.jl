@@ -8,6 +8,9 @@ struct SparseArray{T,N} <: AbstractArray{T,N}
     function SparseArray(a::SparseArray{T,N}) where {T,N}
         new{T,N}(copy(a.data), a.dims)
     end
+    function SparseArray{T,N}(a::Dict{CartesianIndex{N},T}, dims::NTuple{N,Int64}) where {T,N}
+        new{T,N}(a, dims)
+    end
 end
 SparseArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N} =
     SparseArray{T,N}(undef, dims)
@@ -148,7 +151,7 @@ function Base.copy!(dst::SparseArray, src::SparseArray)
     return dst
 end
 
-Base.similar(a::SparseArray, ::Type{S}, dims::Dims{N}) where {S,N} =
+Base.similar(::SparseArray, ::Type{S}, dims::Dims{N}) where {S,N} =
     SparseArray{S}(undef, dims)
 
 ### show and friends
@@ -161,8 +164,8 @@ function Base.show(io::IO, ::MIME"text/plain", x::SparseArray)
         show(IOContext(io, :typeinfo => eltype(x)), x)
     end
 end
-show(io::IO, x::SparseArray) = show(convert(IOContext, io), x)
-function show(io::IOContext, x::SparseArray)
+Base.show(io::IO, x::SparseArray) = show(convert(IOContext, io), x)
+function Base.show(io::IOContext, x::SparseArray)
     nzind = nonzero_keys(x)
     if isempty(nzind)
         return show(io, MIME("text/plain"), x)
