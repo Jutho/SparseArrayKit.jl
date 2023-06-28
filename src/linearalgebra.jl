@@ -31,6 +31,9 @@ function Base.one(x::SparseArray{<:Any,2})
 end
 
 function Base.reshape(parent::SparseArray{T}, dims::Dims) where {T}
+    n = length(parent)
+    n == prod(dims) || 
+        throw(DimensionMismatch("parent has $n elements, which is incompatible with size $dims"))
     child = SparseArray{T}(undef, dims)
     lin_inds = LinearIndices(parent)
     new_cart_inds = CartesianIndices(dims)
