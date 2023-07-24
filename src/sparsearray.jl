@@ -8,6 +8,9 @@ struct SparseArray{T,N} <: AbstractArray{T,N}
     function SparseArray(a::SparseArray{T,N}) where {T,N}
         new{T,N}(copy(a.data), a.dims)
     end
+    function SparseArray{T,N}(a::Dict{CartesianIndex{N},T}, dims::NTuple{N,Int64}) where {T,N}
+        new{T,N}(a, dims)
+    end
 end
 SparseArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N} =
     SparseArray{T,N}(undef, dims)
@@ -83,7 +86,7 @@ end
 _findfirstvalue(v, r) = findfirst(==(v), r)
 # slicing should produce SparseArray
 function Base._unsafe_getindex(::IndexCartesian, a::SparseArray{T,N},
-                                I::Vararg{<:Union{Int,AbstractVector{Int}},N}) where {T,N}
+                                I::Vararg{Union{Int,AbstractVector{Int}},N}) where {T,N}
     @boundscheck checkbounds(a, I...)
     indices = Base.to_indices(a, I)
     b = SparseArray{T}(undef, length.(Base.index_shape(indices...)))
@@ -148,5 +151,39 @@ function Base.copy!(dst::SparseArray, src::SparseArray)
     return dst
 end
 
-Base.similar(a::SparseArray, ::Type{S}, dims::Dims{N}) where {S,N} =
+Base.similar(::SparseArray, ::Type{S}, dims::Dims{N}) where {S,N} =
     SparseArray{S}(undef, dims)
+
+### show and friends
+
+function Base.show(io::IO, ::MIME"text/plain", x::SparseArray)
+    xnnz = nonzero_length(x)
+    print(io, join(size(x), "×"), " ", typeof(x), " with ", xnnz, " stored ", xnnz == 1 ? "entry" : "entries")
+    if xnnz != 0
+        println(io, ":")
+        show(IOContext(io, :typeinfo => eltype(x)), x)
+    end
+end
+Base.show(io::IO, x::SparseArray) = show(convert(IOContext, io), x)
+function Base.show(io::IOContext, x::SparseArray)
+    nzind = nonzero_keys(x)
+    if isempty(nzind)
+        return show(io, MIME("text/plain"), x)
+    end
+    limit = get(io, :limit, false)::Bool
+    half_screen_rows = limit ? div(displaysize(io)[1] - 8, 2) : typemax(Int)
+    pads = map(1:ndims(x)) do i
+        return ndigits(maximum(getindex.(nzind, i)))
+    end
+    if !haskey(io, :compact)
+        io = IOContext(io, :compact => true)
+    end
+    for (k, (ind, val)) in enumerate(nonzero_pairs(x))
+        if k < half_screen_rows || k > length(nzind) - half_screen_rows
+            print(io, "  ", '[', join(lpad.(Tuple(ind), pads), ","), "]  =  ", val)
+            k != length(nzind) && println(io)
+        elseif k == half_screen_rows
+            println(io, "   ", join(" ".^pads, " "), "   \u22ee")
+        end
+    end
+end
