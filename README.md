@@ -4,7 +4,7 @@
 
 | **Build Status** | **Coverage** | **Quality assurance** | **Downloads** |
 |:----------------:|:------------:|:---------------------:|:--------------|
-| [![CI][ci-img]][ci-url] [![CI (Julia nightly)][ci-julia-nightly-img]][ci-julia-nightly-url] | [![Codecov][codecov-img]][codecov-url] | [![Aqua QA][aqua-img]][aqua-url] | [![Strided Downloads][genie-img]][genie-url] |
+| [![CI][ci-img]][ci-url] [![CI (Julia nightly)][ci-julia-nightly-img]][ci-julia-nightly-url] | [![Codecov][codecov-img]][codecov-url] | [![Aqua QA][aqua-img]][aqua-url] | [![SparseArrayKit Downloads][genie-img]][genie-url] |
 
 [github-img]: https://github.com/Jutho/SparseArrayKit.jl/workflows/CI/badge.svg
 [github-url]: https://github.com/Jutho/SparseArrayKit.jl/actions?query=workflow%3ACI
