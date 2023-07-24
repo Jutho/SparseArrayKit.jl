@@ -89,6 +89,7 @@ function _newindices(I::Tuple, indices::Tuple)
 end
 
 _findfirstvalue(v, r) = findfirst(==(v), r)
+
 # slicing should produce SparseArray
 function Base._unsafe_getindex(::IndexCartesian, a::SparseArray{T,N},
                                I::Vararg{Union{Int,AbstractVector{Int}},N}) where {T,N}
@@ -160,8 +161,7 @@ function Base.similar(::SparseArray, ::Type{S}, dims::Dims{N}) where {S,N}
     return SparseArray{S}(undef, dims)
 end
 
-### show and friends
-
+# show and friends
 function Base.show(io::IO, ::MIME"text/plain", x::SparseArray)
     xnnz = nonzero_length(x)
     print(io, join(size(x), "×"), " ", typeof(x), " with ", xnnz, " stored ",

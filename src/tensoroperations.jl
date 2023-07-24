@@ -1,7 +1,8 @@
 # TensorOperations compatiblity
 #-------------------------------
-function add!(α, A::SparseArray{<:Any,N}, CA::Symbol,
-              β, C::SparseArray{<:Any,N}, indCinA) where {N}
+function tensoradd!(C::SparseArray{<:Any,N}, indCinA,
+                    A::SparseArray{<:Any,N}, CA::Symbol,
+                    α::Number=true, β::Number=true) where {N}
     (N == length(indCinA) && TupleTools.isperm(indCinA)) ||
         throw(IndexError("Invalid permutation of length $N: $indCinA"))
     size(C) == TupleTools.getindices(size(A), indCinA) ||
@@ -15,8 +16,9 @@ function add!(α, A::SparseArray{<:Any,N}, CA::Symbol,
     return C
 end
 
-function trace!(α, A::SparseArray{<:Any,NA}, CA::Symbol, β, C::SparseArray{<:Any,NC},
-                indCinA, cindA1, cindA2) where {NA,NC}
+function tensortrace!(C::SparseArray{<:Any,NC}, indCinA,
+                      A::SparseArray{<:Any,NA}, CA::Symbol, cindA1, cindA2,
+                      α::Number=true, β::Number=false) where {NA,NC}
     NC == length(indCinA) ||
         throw(IndexError("Invalid selection of $NC out of $NA: $indCinA"))
     NA - NC == 2 * length(cindA1) == 2 * length(cindA2) ||
@@ -45,11 +47,10 @@ function trace!(α, A::SparseArray{<:Any,NA}, CA::Symbol, β, C::SparseArray{<:A
     return C
 end
 
-function contract!(α, A::SparseArray, CA::Symbol, B::SparseArray, CB::Symbol,
-                   β, C::SparseArray,
-                   oindA::IndexTuple, cindA::IndexTuple,
-                   oindB::IndexTuple, cindB::IndexTuple,
-                   indCinoAB::IndexTuple, syms::Union{Nothing,NTuple{3,Symbol}}=nothing)
+function tensorcontract!(C::SparseArray, indCinoAB,
+                         A::SparseArray, CA::Symbol, oindA, cindA,
+                         B::SparseArray, CB::Symbol, oindB, cindB,
+                         α::Number=true, β::Number=false)
     pA = (oindA..., cindA...)
     (length(pA) == ndims(A) && TupleTools.isperm(pA)) ||
         throw(IndexError("invalid permutation of length $(ndims(A)): $pA"))

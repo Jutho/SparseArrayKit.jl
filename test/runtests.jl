@@ -138,7 +138,7 @@ end
             push!(indices, cur_inds)
             push!(conjlist, rand([true, false]))
         end
-        
+
         sparse_result = TensorOperations.ncon(tensors, indices, conjlist)
         dense_result = TensorOperations.ncon(Array.(tensors), indices, conjlist)
 
