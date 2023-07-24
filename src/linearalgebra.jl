@@ -29,7 +29,7 @@ function LinearAlgebra.rdiv!(x::SparseArray, a::Number)
     return x
 end
 
-function LinearAlgebra.axpby!(α::Number, x::SparseArray, β, y::SparseArray)
+function LinearAlgebra.axpby!(α::Number, x::SparseArray, β::Number, y::SparseArray)
     ax = axes(x)
     ay = axes(y)
     ax == ay || throw(DimensionMismatch("output axes $ay differ from input axes $ax"))
@@ -39,6 +39,20 @@ function LinearAlgebra.axpby!(α::Number, x::SparseArray, β, y::SparseArray)
     end
     return y
 end
+# if VERSION < v"1.9"
+#     using LinearAlgebra: BlasFloat
+#     function LinearAlgebra.axpby!(α::Number, x::SparseArray{T,1}, β::Number, y::SparseArray{T,1}) where {T<:BlasFloat}
+#         ax = axes(x)
+#         ay = axes(y)
+#         ax == ay || throw(DimensionMismatch("output axes $ay differ from input axes $ax"))
+#         β == one(β) || (iszero(β) ? _zero!(y) : LinearAlgebra.lmul!(β, y))
+#         for (k, v) in nonzero_pairs(x)
+#             increaseindex!(y, α * v, k)
+#         end
+#         return y
+#     end
+# end
+
 function LinearAlgebra.axpy!(α::Number, x::SparseArray, y::SparseArray)
     ax = axes(x)
     ay = axes(y)

@@ -7,11 +7,13 @@ println("=======================")
 include("vectorinterface.jl")
 
 println("Testing Tensor Contraction")
-println("=======-=-================")
+println("==========================")
 include("contractions.jl")
 
 module AquaSparseArrayKit
-using SparseArrayKit
-using Aqua
-Aqua.test_all(SparseArrayKit)
+using SparseArrayKit, Aqua, Test
+@testset "Aqua" verbose = true begin
+    Aqua.test_all(TensorOperations;
+                  project_toml_formatting=(VERSION >= v"1.9"))
+end
 end
