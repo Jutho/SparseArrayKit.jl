@@ -1,17 +1,19 @@
 
 # Basic arithmetic
-Base.:*(a::Number, x::SparseArray) =
-    mul!(similar(x, Base.promote_eltypeof(a, x)), a, x)
-Base.:*(x::SparseArray, a::Number) =
-    mul!(similar(x, Base.promote_eltypeof(a, x)), x, a)
-Base.:\(a::Number, x::SparseArray) =
-    mul!(similar(x, Base.promote_eltypeof(a, x)), inv(a), x)
-Base.:/(x::SparseArray, a::Number) =
-    mul!(similar(x, Base.promote_eltypeof(a, x)), x, inv(a))
-Base.:+(x::SparseArray, y::SparseArray) =
+Base.:*(a::Number, x::SparseArray) = mul!(similar(x, Base.promote_eltypeof(a, x)), a, x)
+Base.:*(x::SparseArray, a::Number) = mul!(similar(x, Base.promote_eltypeof(a, x)), x, a)
+function Base.:\(a::Number, x::SparseArray)
+    return mul!(similar(x, Base.promote_eltypeof(a, x)), inv(a), x)
+end
+function Base.:/(x::SparseArray, a::Number)
+    return mul!(similar(x, Base.promote_eltypeof(a, x)), x, inv(a))
+end
+function Base.:+(x::SparseArray, y::SparseArray)
     (T = Base.promote_eltypeof(x, y); axpy!(+one(T), y, copy!(similar(x, T), x)))
-Base.:-(x::SparseArray, y::SparseArray) =
+end
+function Base.:-(x::SparseArray, y::SparseArray)
     (T = Base.promote_eltypeof(x, y); axpy!(-one(T), y, copy!(similar(x, T), x)))
+end
 
 Base.:-(x::SparseArray) = LinearAlgebra.lmul!(-one(eltype(x)), copy(x))
 
@@ -24,15 +26,15 @@ function Base.one(x::SparseArray{<:Any,2})
         throw(DimensionMismatch("multiplicative identity defined only for square matrices"))
 
     u = similar(x)
-    @inbounds for i = 1:m
-        u[i,i] = one(eltype(x))
+    @inbounds for i in 1:m
+        u[i, i] = one(eltype(x))
     end
     return u
 end
 
 function Base.reshape(parent::SparseArray{T}, dims::Dims) where {T}
     n = length(parent)
-    n == prod(dims) || 
+    n == prod(dims) ||
         throw(DimensionMismatch("parent has $n elements, which is incompatible with size $dims"))
     child = SparseArray{T}(undef, dims)
     lin_inds = LinearIndices(parent)
@@ -65,14 +67,14 @@ end
 function LinearAlgebra.mul!(dst::SparseArray, a::Number, src::SparseArray)
     _zero!(dst)
     for (k, v) in nonzero_pairs(src)
-        dst[k] = a*v
+        dst[k] = a * v
     end
     return dst
 end
 function LinearAlgebra.mul!(dst::SparseArray, src::SparseArray, a::Number)
     _zero!(dst)
     for (k, v) in nonzero_pairs(src)
-        dst[k] = v*a
+        dst[k] = v * a
     end
     return dst
 end
@@ -97,19 +99,19 @@ end
 function LinearAlgebra.axpby!(α::Number, x::SparseArray, β, y::SparseArray)
     β == one(β) || (iszero(β) ? _zero!(y) : LinearAlgebra.lmul!(β, y))
     for (k, v) in nonzero_pairs(x)
-        increaseindex!(y, α*v, k)
+        increaseindex!(y, α * v, k)
     end
     return y
 end
 function LinearAlgebra.axpy!(α::Number, x::SparseArray, y::SparseArray)
     for (k, v) in nonzero_pairs(x)
-        increaseindex!(y, α*v, k)
+        increaseindex!(y, α * v, k)
     end
     return y
 end
 
-function LinearAlgebra.norm(x::SparseArray, p::Real = 2)
-    norm(nonzero_values(x), p)
+function LinearAlgebra.norm(x::SparseArray, p::Real=2)
+    return norm(nonzero_values(x), p)
 end
 
 function LinearAlgebra.dot(x::SparseArray, y::SparseArray)
@@ -128,15 +130,16 @@ function LinearAlgebra.dot(x::SparseArray, y::SparseArray)
 end
 
 # permutedims
-Base.permutedims!(dst::SparseArray, src::SparseArray, p) =
-    add!(one(eltype(dst)), src, :N, zero(eltype(dst)), dst, tuple(p...))
+function Base.permutedims!(dst::SparseArray, src::SparseArray, p)
+    return add!(one(eltype(dst)), src, :N, zero(eltype(dst)), dst, tuple(p...))
+end
 
 # matrix functions
 const SV{T} = SparseArray{T,1}
-const SM{T} = SparseArray{T, 2}
-const ASM{T} = Union{SparseArray{T, 2},
-                    Transpose{T, <:SparseArray{T,2}},
-                    Adjoint{T, <:SparseArray{T,2}}}
+const SM{T} = SparseArray{T,2}
+const ASM{T} = Union{SparseArray{T,2},
+                     Transpose{T,<:SparseArray{T,2}},
+                     Adjoint{T,<:SparseArray{T,2}}}
 
 LinearAlgebra.mul!(C::SM, A::ASM, B::ASM) = mul!(C, A, B, one(eltype(C)), zero(eltype(C)))
 function LinearAlgebra.mul!(C::SM, A::ASM, B::ASM, α::Number, β::Number)
@@ -150,7 +153,7 @@ function LinearAlgebra.mul!(C::SM, A::ASM, B::ASM, α::Number, β::Number)
     AA = A isa Union{Adjoint,Transpose} ? parent(A) : A
     BB = B isa Union{Adjoint,Transpose} ? parent(B) : B
 
-    contract!(α, AA, CA, BB, CB, β, C, oindA, cindA, oindB, cindB, (1, 2))
+    return contract!(α, AA, CA, BB, CB, β, C, oindA, cindA, oindB, cindB, (1, 2))
 end
 
 function LinearAlgebra.adjoint!(C::SM, A::SM)

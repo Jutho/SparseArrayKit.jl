@@ -1,8 +1,7 @@
 # TensorOperations compatiblity
 #-------------------------------
-function add!(α, A::SparseArray{<:Any, N}, CA::Symbol,
-                β, C::SparseArray{<:Any, N}, indCinA) where {N}
-
+function add!(α, A::SparseArray{<:Any,N}, CA::Symbol,
+              β, C::SparseArray{<:Any,N}, indCinA) where {N}
     (N == length(indCinA) && TupleTools.isperm(indCinA)) ||
         throw(IndexError("Invalid permutation of length $N: $indCinA"))
     size(C) == TupleTools.getindices(size(A), indCinA) ||
@@ -11,17 +10,16 @@ function add!(α, A::SparseArray{<:Any, N}, CA::Symbol,
     β == one(β) || (iszero(β) ? _zero!(C) : LinearAlgebra.lmul!(β, C))
     for (IA, vA) in A.data
         IC = CartesianIndex(TupleTools.getindices(IA.I, indCinA))
-        C[IC] += α* (CA == :C ? conj(vA) : vA)
+        C[IC] += α * (CA == :C ? conj(vA) : vA)
     end
-    C
+    return C
 end
 
-function trace!(α, A::SparseArray{<:Any, NA}, CA::Symbol, β, C::SparseArray{<:Any, NC},
+function trace!(α, A::SparseArray{<:Any,NA}, CA::Symbol, β, C::SparseArray{<:Any,NC},
                 indCinA, cindA1, cindA2) where {NA,NC}
-
     NC == length(indCinA) ||
         throw(IndexError("Invalid selection of $NC out of $NA: $indCinA"))
-    NA-NC == 2*length(cindA1) == 2*length(cindA2) ||
+    NA - NC == 2 * length(cindA1) == 2 * length(cindA2) ||
         throw(IndexError("invalid number of trace dimension"))
     pA = (indCinA..., cindA1..., cindA2...)
     TupleTools.isperm(pA) ||
@@ -48,15 +46,14 @@ function trace!(α, A::SparseArray{<:Any, NA}, CA::Symbol, β, C::SparseArray{<:
 end
 
 function contract!(α, A::SparseArray, CA::Symbol, B::SparseArray, CB::Symbol,
-                    β, C::SparseArray,
-                    oindA::IndexTuple, cindA::IndexTuple,
-                    oindB::IndexTuple, cindB::IndexTuple,
-                    indCinoAB::IndexTuple, syms::Union{Nothing, NTuple{3,Symbol}} = nothing)
-
-    pA = (oindA...,cindA...)
+                   β, C::SparseArray,
+                   oindA::IndexTuple, cindA::IndexTuple,
+                   oindB::IndexTuple, cindB::IndexTuple,
+                   indCinoAB::IndexTuple, syms::Union{Nothing,NTuple{3,Symbol}}=nothing)
+    pA = (oindA..., cindA...)
     (length(pA) == ndims(A) && TupleTools.isperm(pA)) ||
         throw(IndexError("invalid permutation of length $(ndims(A)): $pA"))
-    pB = (oindB...,cindB...)
+    pB = (oindB..., cindB...)
     (length(pB) == ndims(B) && TupleTools.isperm(pB)) ||
         throw(IndexError("invalid permutation of length $(ndims(B)): $pB"))
     (length(oindA) + length(oindB) == ndims(C)) ||
@@ -80,10 +77,10 @@ function contract!(α, A::SparseArray, CA::Symbol, B::SparseArray, CB::Symbol,
 
     β == one(β) || (iszero(β) ? _zero!(C) : LinearAlgebra.lmul!(β, C))
 
-    keysA = sort!(collect(nonzero_keys(A)),
-                    by = IA->CartesianIndex(TupleTools.getindices(IA.I, cindA)))
-    keysB = sort!(collect(nonzero_keys(B)),
-                    by = IB->CartesianIndex(TupleTools.getindices(IB.I, cindB)))
+    keysA = sort!(collect(nonzero_keys(A));
+                  by=IA -> CartesianIndex(TupleTools.getindices(IA.I, cindA)))
+    keysB = sort!(collect(nonzero_keys(B));
+                  by=IB -> CartesianIndex(TupleTools.getindices(IB.I, cindB)))
 
     iA = iB = 1
     @inbounds while iA <= length(keysA) && iB <= length(keysB)
@@ -95,7 +92,7 @@ function contract!(α, A::SparseArray, CA::Symbol, B::SparseArray, CB::Symbol,
             Ic = IAc
             jA = iA
             while jA < length(keysA)
-                if CartesianIndex(TupleTools.getindices(keysA[jA+1].I, cindA)) == Ic
+                if CartesianIndex(TupleTools.getindices(keysA[jA + 1].I, cindA)) == Ic
                     jA += 1
                 else
                     break
@@ -103,7 +100,7 @@ function contract!(α, A::SparseArray, CA::Symbol, B::SparseArray, CB::Symbol,
             end
             jB = iB
             while jB < length(keysB)
-                if CartesianIndex(TupleTools.getindices(keysB[jB+1].I, cindB)) == Ic
+                if CartesianIndex(TupleTools.getindices(keysB[jB + 1].I, cindB)) == Ic
                     jB += 1
                 else
                     break
@@ -122,7 +119,9 @@ function contract!(α, A::SparseArray, CA::Symbol, B::SparseArray, CB::Symbol,
                         IABo = CartesianIndex(IAo, IBo)
                         IC = CartesianIndex(TupleTools.getindices(IABo.I, indCinoAB))
                         vA = A[IA]
-                        increaseindex!(C, α * (CA == :C ? conj(vA) : vA) * (CB == :C ? conj(vB) : vB), IC)
+                        increaseindex!(C,
+                                       α * (CA == :C ? conj(vA) : vA) *
+                                       (CB == :C ? conj(vB) : vB), IC)
                     end
                 end
             else
@@ -136,19 +135,21 @@ function contract!(α, A::SparseArray, CA::Symbol, B::SparseArray, CB::Symbol,
                         vB = B[IB]
                         IABo = CartesianIndex(IAo, IBo)
                         IC = CartesianIndex(TupleTools.getindices(IABo.I, indCinoAB))
-                        increaseindex!(C, α * (CA == :C ? conj(vA) : vA) * (CB == :C ? conj(vB) : vB), IC)
+                        increaseindex!(C,
+                                       α * (CA == :C ? conj(vA) : vA) *
+                                       (CB == :C ? conj(vB) : vB), IC)
                     end
                 end
             end
-            iA = jA+1
-            iB = jB+1
+            iA = jA + 1
+            iB = jB + 1
         elseif IAc < IBc
             iA += 1
         else
             iB += 1
         end
     end
-    C
+    return C
 end
 
 # function contract_CSC!(α, A::SparseArray, CA::Symbol, B::SparseArray, CB::Symbol,

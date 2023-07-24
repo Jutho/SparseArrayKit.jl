@@ -6,14 +6,16 @@ struct SparseArray{T,N} <: AbstractArray{T,N}
         return new{T,N}(Dict{CartesianIndex{N},T}(), dims)
     end
     function SparseArray(a::SparseArray{T,N}) where {T,N}
-        new{T,N}(copy(a.data), a.dims)
+        return new{T,N}(copy(a.data), a.dims)
     end
-    function SparseArray{T,N}(a::Dict{CartesianIndex{N},T}, dims::NTuple{N,Int64}) where {T,N}
-        new{T,N}(a, dims)
+    function SparseArray{T,N}(a::Dict{CartesianIndex{N},T},
+                              dims::NTuple{N,Int64}) where {T,N}
+        return new{T,N}(a, dims)
     end
 end
-SparseArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N} =
-    SparseArray{T,N}(undef, dims)
+function SparseArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N}
+    return SparseArray{T,N}(undef, dims)
+end
 SparseArray{T}(::UndefInitializer, dims...) where {T} = SparseArray{T}(undef, dims)
 
 nonzero_pairs(a::SparseArray) = pairs(a.data)
@@ -29,8 +31,10 @@ _sizehint!(x::SparseArray, n) = sizehint!(x.data, n)
     @boundscheck checkbounds(a, I)
     return get(a.data, I, zero(T))
 end
-Base.@propagate_inbounds Base.getindex(a::SparseArray{T,N}, I::Vararg{Int,N}) where {T,N} =
-                                        getindex(a, CartesianIndex(I))
+Base.@propagate_inbounds function Base.getindex(a::SparseArray{T,N},
+                                                I::Vararg{Int,N}) where {T,N}
+    return getindex(a, CartesianIndex(I))
+end
 
 @inline function Base.setindex!(a::SparseArray{T,N}, v, I::CartesianIndex{N}) where {T,N}
     @boundscheck checkbounds(a, I)
@@ -41,9 +45,10 @@ Base.@propagate_inbounds Base.getindex(a::SparseArray{T,N}, I::Vararg{Int,N}) wh
     end
     return v
 end
-Base.@propagate_inbounds Base.setindex!(a::SparseArray{T,N},
-                                        v, I::Vararg{Int,N}) where {T,N} =
-                                            setindex!(a, v, CartesianIndex(I))
+Base.@propagate_inbounds function Base.setindex!(a::SparseArray{T,N},
+                                                 v, I::Vararg{Int,N}) where {T,N}
+    return setindex!(a, v, CartesianIndex(I))
+end
 
 @inline function increaseindex!(a::SparseArray{T,N}, v, I::CartesianIndex{N}) where {T,N}
     @boundscheck checkbounds(a, I)
@@ -73,7 +78,7 @@ end
 _newindex(i::Int, range::Int) = i == range ? () : nothing
 function _newindex(i::Int, range::AbstractVector{Int})
     k = findfirst(==(i), range)
-    k === nothing ? nothing : (k,)
+    return k === nothing ? nothing : (k,)
 end
 _newindices(I::Tuple{}, indices::Tuple{}) = ()
 function _newindices(I::Tuple, indices::Tuple)
@@ -86,7 +91,7 @@ end
 _findfirstvalue(v, r) = findfirst(==(v), r)
 # slicing should produce SparseArray
 function Base._unsafe_getindex(::IndexCartesian, a::SparseArray{T,N},
-                                I::Vararg{Union{Int,AbstractVector{Int}},N}) where {T,N}
+                               I::Vararg{Union{Int,AbstractVector{Int}},N}) where {T,N}
     @boundscheck checkbounds(a, I...)
     indices = Base.to_indices(a, I)
     b = SparseArray{T}(undef, length.(Base.index_shape(indices...)))
@@ -105,7 +110,7 @@ function Base.Array{T,N}(a::SparseArray) where {T,N}
     for (I, v) in a.data
         d[I] = v
     end
-    d
+    return d
 end
 
 SparseArray(a::AbstractArray{T,N}) where {T,N} = SparseArray{T,N}(a)
@@ -121,14 +126,14 @@ end
 Base.convert(::Type{S}, a::S) where {S<:SparseArray} = a
 Base.convert(S::Type{<:SparseArray}, a::AbstractArray) = S(a)
 
-function SparseArray(A::Adjoint{T,<:SparseArray{T,2}}) where T
+function SparseArray(A::Adjoint{T,<:SparseArray{T,2}}) where {T}
     B = SparseArray{T}(undef, size(A))
     for (I, v) in parent(A).data
         B[I[2], I[1]] = conj(v)
     end
     return B
 end
-function SparseArray(A::Transpose{T,<:SparseArray{T,2}}) where T
+function SparseArray(A::Transpose{T,<:SparseArray{T,2}}) where {T}
     B = SparseArray{T}(undef, size(A))
     for (I, v) in parent(A).data
         B[I[2], I[1]] = v
@@ -141,8 +146,8 @@ Base.copy(a::SparseArray) = SparseArray(a)
 Base.size(a::SparseArray) = a.dims
 
 function Base.copy!(dst::SparseArray, src::SparseArray)
-    axes(dst) == axes(src) || throw(ArgumentError(
-        "arrays must have the same axes for copy! (consider using `copyto!`)"))
+    axes(dst) == axes(src) ||
+        throw(ArgumentError("arrays must have the same axes for copy! (consider using `copyto!`)"))
 
     _zero!(dst)
     for (I, v) in nonzero_pairs(src)
@@ -151,14 +156,16 @@ function Base.copy!(dst::SparseArray, src::SparseArray)
     return dst
 end
 
-Base.similar(::SparseArray, ::Type{S}, dims::Dims{N}) where {S,N} =
-    SparseArray{S}(undef, dims)
+function Base.similar(::SparseArray, ::Type{S}, dims::Dims{N}) where {S,N}
+    return SparseArray{S}(undef, dims)
+end
 
 ### show and friends
 
 function Base.show(io::IO, ::MIME"text/plain", x::SparseArray)
     xnnz = nonzero_length(x)
-    print(io, join(size(x), "×"), " ", typeof(x), " with ", xnnz, " stored ", xnnz == 1 ? "entry" : "entries")
+    print(io, join(size(x), "×"), " ", typeof(x), " with ", xnnz, " stored ",
+          xnnz == 1 ? "entry" : "entries")
     if xnnz != 0
         println(io, ":")
         show(IOContext(io, :typeinfo => eltype(x)), x)
@@ -183,7 +190,7 @@ function Base.show(io::IOContext, x::SparseArray)
             print(io, "  ", '[', join(lpad.(Tuple(ind), pads), ","), "]  =  ", val)
             k != length(nzind) && println(io)
         elseif k == half_screen_rows
-            println(io, "   ", join(" ".^pads, " "), "   \u22ee")
+            println(io, "   ", join(" " .^ pads, " "), "   \u22ee")
         end
     end
 end
