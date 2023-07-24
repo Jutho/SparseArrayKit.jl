@@ -1,30 +1,25 @@
 # Julia LinearAlgebra functionality
 # ----------------------------------
-# vector space behavior
-function LinearAlgebra.mul!(dst::SparseArray, a::Number, src::SparseArray)
-    _zero!(dst)
-    for (k, v) in nonzero_pairs(src)
-        dst[k] = a * v
+function LinearAlgebra.mul!(y::SparseArray, α::Number, x::SparseArray)
+    ax = axes(x)
+    ay = axes(y)
+    ax == ay || throw(DimensionMismatch("output axes $ay differ from input axes $ax"))
+    _zero!(y)
+    for (k, v) in nonzero_pairs(x)
+        y[k] = α * v
     end
-    return dst
+    return y
 end
-function LinearAlgebra.mul!(dst::SparseArray, src::SparseArray, a::Number)
-    _zero!(dst)
-    for (k, v) in nonzero_pairs(src)
-        dst[k] = v * a
-    end
-    return dst
-end
-function LinearAlgebra.lmul!(a::Number, x::SparseArray)
-    lmul!(a, x.data.vals)
+LinearAlgebra.mul!(y::SparseArray, x::SparseArray, α::Number) = scale!(y, x, α)
+
+function LinearAlgebra.lmul!(α::Number, x::SparseArray)
     # typical occupation in a dict is about 30% from experimental testing
     # the benefits of scaling all values (e.g. SIMD) largely outweight the extra work
+    lmul!(α, x.data.vals)
     return x
 end
-function LinearAlgebra.rmul!(x::SparseArray, a::Number)
-    rmul!(x.data.vals, a)
-    return x
-end
+LinearAlgebra.rmul!(x::SparseArray, α::Number) = scale!(x, α)
+
 function LinearAlgebra.ldiv!(a::Number, x::SparseArray)
     ldiv!(a, x.data.vals)
     return x
@@ -33,7 +28,11 @@ function LinearAlgebra.rdiv!(x::SparseArray, a::Number)
     rdiv!(x.data.vals, a)
     return x
 end
+
 function LinearAlgebra.axpby!(α::Number, x::SparseArray, β, y::SparseArray)
+    ax = axes(x)
+    ay = axes(y)
+    ax == ay || throw(DimensionMismatch("output axes $ay differ from input axes $ax"))
     β == one(β) || (iszero(β) ? _zero!(y) : LinearAlgebra.lmul!(β, y))
     for (k, v) in nonzero_pairs(x)
         increaseindex!(y, α * v, k)
@@ -41,6 +40,9 @@ function LinearAlgebra.axpby!(α::Number, x::SparseArray, β, y::SparseArray)
     return y
 end
 function LinearAlgebra.axpy!(α::Number, x::SparseArray, y::SparseArray)
+    ax = axes(x)
+    ay = axes(y)
+    ax == ay || throw(DimensionMismatch("output axes $ay differ from input axes $ax"))
     for (k, v) in nonzero_pairs(x)
         increaseindex!(y, α * v, k)
     end
@@ -50,21 +52,7 @@ end
 function LinearAlgebra.norm(x::SparseArray, p::Real=2)
     return norm(nonzero_values(x), p)
 end
-
-function LinearAlgebra.dot(x::SparseArray, y::SparseArray)
-    size(x) == size(y) || throw(DimensionMismatch("dot arguments have different size"))
-    s = dot(zero(eltype(x)), zero(eltype(y)))
-    if nonzero_length(x) >= nonzero_length(y)
-        @inbounds for I in nonzero_keys(x)
-            s += dot(x[I], y[I])
-        end
-    else
-        @inbounds for I in nonzero_keys(y)
-            s += dot(x[I], y[I])
-        end
-    end
-    return s
-end
+LinearAlgebra.dot(x::SparseArray, y::SparseArray) = inner(x, y)
 
 # matrix functions
 const SV{T} = SparseArray{T,1}

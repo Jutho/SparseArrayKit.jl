@@ -4,7 +4,7 @@ function tensoradd!(C::SparseArray{<:Any,N}, indCinA,
                     A::SparseArray{<:Any,N}, CA::Symbol,
                     α::Number=true, β::Number=true) where {N}
     (N == length(indCinA) && TupleTools.isperm(indCinA)) ||
-        throw(IndexError("Invalid permutation of length $N: $indCinA"))
+        throw(ArgumentError("Invalid permutation of length $N: $indCinA"))
     size(C) == TupleTools.getindices(size(A), indCinA) ||
         throw(DimensionMismatch("non-matching sizes while adding arrays"))
 
@@ -20,12 +20,12 @@ function tensortrace!(C::SparseArray{<:Any,NC}, indCinA,
                       A::SparseArray{<:Any,NA}, CA::Symbol, cindA1, cindA2,
                       α::Number=true, β::Number=false) where {NA,NC}
     NC == length(indCinA) ||
-        throw(IndexError("Invalid selection of $NC out of $NA: $indCinA"))
+        throw(ArgumentError("Invalid selection of $NC out of $NA: $indCinA"))
     NA - NC == 2 * length(cindA1) == 2 * length(cindA2) ||
-        throw(IndexError("invalid number of trace dimension"))
+        throw(ArgumentError("invalid number of trace dimension"))
     pA = (indCinA..., cindA1..., cindA2...)
     TupleTools.isperm(pA) ||
-        throw(IndexError("invalid permutation of length $(ndims(A)): $pA"))
+        throw(ArgumentError("invalid permutation of length $(ndims(A)): $pA"))
 
     sizeA = size(A)
     sizeC = size(C)
@@ -53,14 +53,14 @@ function tensorcontract!(C::SparseArray, indCinoAB,
                          α::Number=true, β::Number=false)
     pA = (oindA..., cindA...)
     (length(pA) == ndims(A) && TupleTools.isperm(pA)) ||
-        throw(IndexError("invalid permutation of length $(ndims(A)): $pA"))
+        throw(ArgumentError("invalid permutation of length $(ndims(A)): $pA"))
     pB = (oindB..., cindB...)
     (length(pB) == ndims(B) && TupleTools.isperm(pB)) ||
-        throw(IndexError("invalid permutation of length $(ndims(B)): $pB"))
+        throw(ArgumentError("invalid permutation of length $(ndims(B)): $pB"))
     (length(oindA) + length(oindB) == ndims(C)) ||
-        throw(IndexError("non-matching output indices in contraction"))
+        throw(ArgumentError("non-matching output indices in contraction"))
     (ndims(C) == length(indCinoAB) && isperm(indCinoAB)) ||
-        throw(IndexError("invalid permutation of length $(ndims(C)): $indCinoAB"))
+        throw(ArgumentError("invalid permutation of length $(ndims(C)): $indCinoAB"))
 
     sizeA = size(A)
     sizeB = size(B)
@@ -152,128 +152,3 @@ function tensorcontract!(C::SparseArray, indCinoAB,
     end
     return C
 end
-
-# function contract_CSC!(α, A::SparseArray, CA::Symbol, B::SparseArray, CB::Symbol,
-#                     β, C::SparseArray,
-#                     oindA::IndexTuple, cindA::IndexTuple,
-#                     oindB::IndexTuple, cindB::IndexTuple,
-#                     indCinoAB::IndexTuple, syms::Union{Nothing, NTuple{3,Symbol}} = nothing)
-#
-#     pA = (oindA...,cindA...)
-#     (length(pA) == ndims(A) && TupleTools.isperm(pA)) ||
-#         throw(IndexError("invalid permutation of length $(ndims(A)): $pA"))
-#     pB = (oindB...,cindB...)
-#     (length(pB) == ndims(B) && TupleTools.isperm(pB)) ||
-#         throw(IndexError("invalid permutation of length $(ndims(B)): $pB"))
-#     (length(oindA) + length(oindB) == ndims(C)) ||
-#         throw(IndexError("non-matching output indices in contraction"))
-#     (ndims(C) == length(indCinoAB) && isperm(indCinoAB)) ||
-#         throw(IndexError("invalid permutation of length $(ndims(C)): $indCinoAB"))
-#
-#     sizeA = size(A)
-#     sizeB = size(B)
-#     sizeC = size(C)
-#
-#     csizeA = TupleTools.getindices(sizeA, cindA)
-#     csizeB = TupleTools.getindices(sizeB, cindB)
-#     osizeA = TupleTools.getindices(sizeA, oindA)
-#     osizeB = TupleTools.getindices(sizeB, oindB)
-#
-#     csizeA == csizeB ||
-#         throw(DimensionMismatch("non-matching sizes in contracted dimensions"))
-#     TupleTools.getindices((osizeA..., osizeB...), indCinoAB) == size(C) ||
-#         throw(DimensionMismatch("non-matching sizes in uncontracted dimensions"))
-#
-#     β == one(β) || (iszero(β) ? _zero!(C) : LinearAlgebra.lmul!(β, C))
-#     if isempty(nonzero_pairs(A)) || isempty(nonzero_pairs(B))
-#         return C
-#     end
-#
-#     # Build CSC-like representation, using internal Dict structure
-#     # perform multiplication based on Gustafson's algorithm
-#     Anz = nonzero_pairs(A)
-#     Bnz = nonzero_pairs(B)
-#     sortbyA = i->_subind(i, Anz, cindA)
-#     sortbyB = i->_subind(i, Bnz, oindB)
-#
-#     indexA = sort!(findall(!iszero, Anz.slots); by = sortbyA)
-#     indexB = sort!(findall(!iszero, Bnz.slots); by = sortbyB)
-#     rowvalsA = map(i->_subind(i, Anz, oindA), indexA)
-#     rowvalsB = map(i->_subind(i, Bnz, cindB), indexB)
-#     colvalsA, colptrA = _uniqueranges(sortbyA, indexA)
-#     colmapA = Dict(colvalsA[i]=>i for i in 1:length(colvalsA))
-#     colvalsB, colptrB = _uniqueranges(sortbyB, indexB)
-#     nzvalsA = Anz.vals[indexA]
-#     nzvalsB = Bnz.vals[indexB]
-#
-#     colptrC = similar(colptrB)
-#     rowvalsC = similar(rowvalsA, 0)
-#     nzvalsC = Vector{eltype(C)}()
-#     localrowsC = Dict{eltype(rowvalsA), Int}()
-#
-#     offset = 0
-#     counter = 0
-#     @inbounds for jB = 1:length(colvalsB)
-#         IBo = colvalsB[jB]
-#         colptrC[jB] = offset+1
-#         rowsB = colptrB[jB]:(colptrB[jB+1]-1)
-#         for kB in rowsB
-#             IBc = rowvalsB[kB]
-#             vB = CB == :C ? conj(nzvalsB[kB]) : nzvalsB[kB]
-#             kA = get(colmapA, IBc, 0)
-#             kA == 0 && continue
-#             rowsA = colptrA[kA]:(colptrA[kA+1]-1)
-#             for iA in rowsA
-#                 IAo = rowvalsA[iA]
-#                 vA = CA == :C ? conj(nzvalsA[iA]) : nzvalsA[iA]
-#                 iC = get!(localrowsC, IAo, counter+1)
-#                 if iC <= counter
-#                     nzvalsC[offset + iC] += vA*vB
-#                 else
-#                     push!(nzvalsC, vA*vB)
-#                     push!(rowvalsC, IAo)
-#                     counter += 1
-#                 end
-#             end
-#         end
-#         offset += counter
-#         counter = 0
-#         empty!(localrowsC)
-#     end
-#     colptrC[end] = offset+1
-#
-#     # transfer CSC data to C
-#     _sizehint!(C, 2*length(nzvalsC))
-#     @inbounds for j in 1:length(colvalsB)
-#         IBo = colvalsB[j]
-#         for i in colptrC[j]:(colptrC[j+1]-1)
-#             IAo = rowvalsC[i]
-#             vC = nzvalsC[i]
-#             IABo = CartesianIndex(IAo, IBo)
-#             IC = CartesianIndex(TupleTools.getindices(IABo.I, indCinoAB))
-#             increaseindex!(C, α * vC, IC)
-#         end
-#     end
-#     return C
-# end
-#
-# @inbounds _subind(i, d::Dict{<:CartesianIndex}, ind::IndexTuple) =
-#     CartesianIndex(TupleTools.getindices(d.keys[i].I, ind))
-#
-# # for a sorted vector a, return a list of unique elements and a vector whose i'th entry is
-# # the starting index of the i'th unique element in a
-# function _uniqueranges(f, a::AbstractVector{T}) where T
-#     isempty(a) && error("does not work on empty array")
-#     i = 1
-#     startindex = [1]
-#     uniquevals = [f(a[1])]
-#     @inbounds for j in 2:length(a)
-#         v = f(a[j])
-#         v == uniquevals[i] && continue
-#         push!(uniquevals, v)
-#         push!(startindex, j)
-#         i += 1
-#     end
-#     push!(startindex, length(a)+1)
-#     return uniquevals, startindex
-# end

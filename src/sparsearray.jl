@@ -23,7 +23,7 @@ nonzero_keys(a::SparseArray) = keys(a.data)
 nonzero_values(a::SparseArray) = values(a.data)
 nonzero_length(a::SparseArray) = length(a.data)
 
-_zero!(x::SparseArray) = empty!(x.data)
+_zero!(x::SparseArray) = (empty!(x.data); return x)
 _sizehint!(x::SparseArray, n) = sizehint!(x.data, n)
 
 # elementary getindex and setindex!

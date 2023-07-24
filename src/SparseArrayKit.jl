@@ -1,6 +1,11 @@
 module SparseArrayKit
 
+using VectorInterface
+using VectorInterface: ONumber, _one
+_isone(α::ONumber) = α === _one || isone(α)
+
 using LinearAlgebra
+
 using TupleTools
 
 if !isdefined(Base, :get_extension)
@@ -13,8 +18,10 @@ export SparseArray
 export nonzero_pairs, nonzero_keys, nonzero_values, nonzero_length
 
 include("sparsearray.jl")
-include("linearalgebra.jl")
+include("base.jl")
+include("vectorinterface.jl")
 include("tensoroperations.jl")
+include("linearalgebra.jl")
 
 # Initialization
 #-----------------
