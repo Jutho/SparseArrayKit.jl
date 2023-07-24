@@ -1,3 +1,5 @@
+<img src="https://github.com/Jutho/SparseArrayKit.jl/blob/master/docs/src/assets/logo.svg" width="150">
+
 # SparseArrayKit.jl
 
 | **Build Status** | **Coverage** | **Quality assurance** | **Downloads** |
