@@ -1,7 +1,7 @@
 name = "SparseArrayKit"
 uuid = "a9a3c162-d163-4c15-8926-b8794fbefed2"
 authors = ["Lukas Devos <lukas.devos@ugent.be>", "Maarten Van Damme <maartenvd1994@gmail.com>", "Jutho Haegeman <jutho.haegeman@ugent.be>"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -23,8 +23,8 @@ SparseArrayKitTensorOperations = "TensorOperations"
 Requires = "1"
 TensorOperations = "4"
 TupleTools = "1.1"
-VectorInterface = "0.2"
-julia = "1.6 - 1"
+VectorInterface = "0.3"
+julia = "1.6"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"

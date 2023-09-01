@@ -1,8 +1,8 @@
 module SparseArrayKit
 
 using VectorInterface
-using VectorInterface: ONumber, _one
-_isone(α::ONumber) = α === _one || isone(α)
+using VectorInterface: _one
+_isone(α::Number) = α === _one
 
 using LinearAlgebra
 

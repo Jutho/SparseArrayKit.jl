@@ -12,15 +12,16 @@ VectorInterface.zerovector!!(x::SparseArray) = zerovector!(x)
 
 # scale, scale! & scale!!
 #-------------------------
-VectorInterface.scale(x::SparseArray, α::ONumber) = α === _one ? copy(x) : x * α
+VectorInterface.scale(x::SparseArray, α::Number) = _isone(α) ? copy(x) : x * α
 
-function VectorInterface.scale!(x::SparseArray, α::ONumber)
+function VectorInterface.scale!(x::SparseArray, α::Number)
+    _isone(α) && return x
     # typical occupation in a dict is about 30% from experimental testing
     # the benefits of scaling all values (e.g. SIMD) largely outweight the extra work
     scale!(x.data.vals, α)
     return x
 end
-function VectorInterface.scale!(y::SparseArray, x::SparseArray, α::ONumber)
+function VectorInterface.scale!(y::SparseArray, x::SparseArray, α::Number)
     ax = axes(x)
     ay = axes(y)
     ax == ay || throw(DimensionMismatch("output axes $ay differ from input axes $ax"))
@@ -50,8 +51,10 @@ end
 
 # add, add! & add!!
 #-------------------
-function VectorInterface.add(y::SparseArray, x::SparseArray, α::ONumber=_one,
-                             β::ONumber=_one)
+function VectorInterface.add(y::SparseArray,
+                             x::SparseArray,
+                             α::Number=_one,
+                             β::Number=_one)
     ax = axes(x)
     ay = axes(y)
     ax == ay || throw(DimensionMismatch("output axes $ay differ from input axes $ax"))
@@ -62,8 +65,10 @@ function VectorInterface.add(y::SparseArray, x::SparseArray, α::ONumber=_one,
     return z
 end
 
-function VectorInterface.add!(y::SparseArray, x::SparseArray, α::ONumber=_one,
-                              β::ONumber=_one)
+function VectorInterface.add!(y::SparseArray,
+                              x::SparseArray,
+                              α::Number=_one,
+                              β::Number=_one)
     ax = axes(x)
     ay = axes(y)
     ax == ay || throw(DimensionMismatch("output axes $ay differ from input axes $ax"))
@@ -74,8 +79,10 @@ function VectorInterface.add!(y::SparseArray, x::SparseArray, α::ONumber=_one,
     return y
 end
 
-function VectorInterface.add!!(y::SparseArray, x::SparseArray, α::ONumber=_one,
-                               β::ONumber=_one)
+function VectorInterface.add!!(y::SparseArray,
+                               x::SparseArray,
+                               α::Number=_one,
+                               β::Number=_one)
     T = scalartype(y)
     if promote_type(T, typeof(α), typeof(β), scalartype(x)) <: T
         return add!(y, x, α, β)
