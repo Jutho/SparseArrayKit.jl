@@ -23,7 +23,7 @@ SparseArrayKitTensorOperations = "TensorOperations"
 Requires = "1"
 TensorOperations = "4"
 TupleTools = "1.1"
-VectorInterface = "0.3"
+VectorInterface = "0.4"
 julia = "1.6"
 
 [extras]

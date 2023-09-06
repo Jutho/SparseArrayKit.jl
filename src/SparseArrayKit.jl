@@ -1,11 +1,7 @@
 module SparseArrayKit
 
 using VectorInterface
-using VectorInterface: _one
-_isone(α::Number) = α === _one
-
 using LinearAlgebra
-
 using TupleTools
 
 if !isdefined(Base, :get_extension)

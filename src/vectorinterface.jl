@@ -1,21 +1,18 @@
-# Vector interface implementation for 'SparseArray
+# Vector interface implementation for SparseArray
 ##################################################################
 # zerovector & zerovector!!
 #---------------------------
 function VectorInterface.zerovector(x::SparseArray, ::Type{S}) where {S<:Number}
-    T = typeof(zero(eltype(x)) * zero(S))
-    return SparseArray{T}(undef, size(x))
+    return SparseArray{S}(undef, size(x))
 end
-
 VectorInterface.zerovector!(x::SparseArray) = _zero!(x)
 VectorInterface.zerovector!!(x::SparseArray) = zerovector!(x)
 
 # scale, scale! & scale!!
 #-------------------------
-VectorInterface.scale(x::SparseArray, α::Number) = _isone(α) ? copy(x) : x * α
-
+VectorInterface.scale(x::SparseArray, α::Number) = α === One() ? copy(x) : x * α
 function VectorInterface.scale!(x::SparseArray, α::Number)
-    _isone(α) && return x
+    α === One() && return x
     # typical occupation in a dict is about 30% from experimental testing
     # the benefits of scaling all values (e.g. SIMD) largely outweight the extra work
     scale!(x.data.vals, α)
@@ -25,24 +22,22 @@ function VectorInterface.scale!(y::SparseArray, x::SparseArray, α::Number)
     ax = axes(x)
     ay = axes(y)
     ax == ay || throw(DimensionMismatch("output axes $ay differ from input axes $ax"))
-    _zero!(y)
+    zerovector!(y)
     for (k, v) in nonzero_pairs(x)
         y[k] = scale!!(v, α)
     end
     return y
 end
-
 function VectorInterface.scale!!(x::SparseArray, α::Number)
-    T = scalartype(x)
-    if promote_type(T, typeof(α)) <: T
+    α === One() && return x
+    if VectorInterface.promote_scale(x, α) <: scalartype(x)
         return scale!(x, α)
     else
         return scale(x, α)
     end
 end
 function VectorInterface.scale!!(y::SparseArray, x::SparseArray, α::Number)
-    T = scalartype(y)
-    if promote_type(T, typeof(α), scalartype(x)) <: T
+    if VectorInterface.promote_scale(x, α) <: scalartype(y)
         return scale!(y, x, α)
     else
         return scale(x, α)
@@ -51,40 +46,30 @@ end
 
 # add, add! & add!!
 #-------------------
-function VectorInterface.add(y::SparseArray,
-                             x::SparseArray,
-                             α::Number=_one,
-                             β::Number=_one)
+function VectorInterface.add(y::SparseArray, x::SparseArray, α::Number, β::Number)
     ax = axes(x)
     ay = axes(y)
     ax == ay || throw(DimensionMismatch("output axes $ay differ from input axes $ax"))
-    T = promote_type(scalartype(y), scalartype(x), typeof(α), typeof(β))
+    T = VectorInterface.promote_add(y, x, α, β)
     z = SparseArray{T}(undef, size(y))
     scale!(z, y, β)
     add!(z, x, α)
     return z
 end
 
-function VectorInterface.add!(y::SparseArray,
-                              x::SparseArray,
-                              α::Number=_one,
-                              β::Number=_one)
+function VectorInterface.add!(y::SparseArray, x::SparseArray, α::Number, β::Number)
     ax = axes(x)
     ay = axes(y)
     ax == ay || throw(DimensionMismatch("output axes $ay differ from input axes $ax"))
-    _isone(β) || (iszero(β) ? _zero!(y) : scale!(y, β))
+    scale!(y, β)
     for (k, v) in nonzero_pairs(x)
         increaseindex!(y, scale!!(v, α), k)
     end
     return y
 end
 
-function VectorInterface.add!!(y::SparseArray,
-                               x::SparseArray,
-                               α::Number=_one,
-                               β::Number=_one)
-    T = scalartype(y)
-    if promote_type(T, typeof(α), typeof(β), scalartype(x)) <: T
+function VectorInterface.add!!(y::SparseArray, x::SparseArray, α::Number, β::Number)
+    if VectorInterface.promote_add(y, x, α, β) <: scalartype(y)
         return add!(y, x, α, β)
     else
         return add(y, x, α, β)
@@ -97,14 +82,14 @@ function VectorInterface.inner(x::SparseArray, y::SparseArray)
     ax = axes(x)
     ay = axes(y)
     ax == ay || throw(DimensionMismatch("dot arguments have non-matching axes $ax and $ay"))
-    s = dot(zero(eltype(x)), zero(eltype(y)))
+    s = zero(VectorInterface.promote_inner(x, y))
     if nonzero_length(x) >= nonzero_length(y)
         @inbounds for I in nonzero_keys(x)
-            s += dot(x[I], y[I])
+            s += VectorInterface.inner(x[I], y[I])
         end
     else
         @inbounds for I in nonzero_keys(y)
-            s += dot(x[I], y[I])
+            s += VectorInterface.inner(x[I], y[I])
         end
     end
     return s
