@@ -1,16 +1,8 @@
 module SparseArrayKit
 
 using VectorInterface
-using VectorInterface: _one
-_isone(α::Number) = α === _one
-
 using LinearAlgebra
-
 using TupleTools
-
-if !isdefined(Base, :get_extension)
-    using Requires
-end
 
 const IndexTuple{N} = NTuple{N,Int}
 
@@ -25,16 +17,9 @@ include("linearalgebra.jl")
 
 # Initialization
 #-----------------
+using PackageExtensionCompat
 function __init__()
-    @static if !isdefined(Base, :get_extension)
-        @require TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2" begin
-            include("../ext/SparseArrayKitTensorOperations.jl")
-        end
-
-        @require SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf" begin
-            include("../ext/SparseArrayKitSparseArrays.jl")
-        end
-    end
+    @require_extensions
 end
 
 end

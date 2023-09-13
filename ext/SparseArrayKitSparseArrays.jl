@@ -1,11 +1,6 @@
 module SparseArrayKitSparseArrays
 
-@static if isdefined(Base, :get_extension)
-    using SparseArrays: SparseMatrixCSC, nonzeros, rowvals, nzrange
-else
-    using ..SparseArrays: SparseMatrixCSC, nonzeros, rowvals, nzrange
-end
-
+using SparseArrays: SparseMatrixCSC, nonzeros, rowvals, nzrange
 using SparseArrayKit
 
 Base.convert(T::Type{<:SparseArray}, a::SparseMatrixCSC) = T(a)

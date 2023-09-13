@@ -90,5 +90,5 @@ function LinearAlgebra.mul!(C::SM, A::ASM, B::ASM, α::Number, β::Number)
     return tensorcontract!(C, (1, 2), AA, CA, oindA, cindA, BB, CB, oindB, cindB, α, β)
 end
 
-LinearAlgebra.adjoint!(C::SM, A::SM) = tensoradd!(C, (2, 1), A, :C, true, false)
-LinearAlgebra.transpose!(C::SM, A::SM) = tensoradd!(C, (2, 1), A, :N, true, false)
+LinearAlgebra.adjoint!(C::SM, A::SM) = tensoradd!(C, (2, 1), A, :C, One(), Zero())
+LinearAlgebra.transpose!(C::SM, A::SM) = tensoradd!(C, (2, 1), A, :N, One(), Zero())

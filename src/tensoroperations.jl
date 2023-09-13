@@ -2,13 +2,12 @@
 #-------------------------------
 function tensoradd!(C::SparseArray{<:Any,N}, indCinA,
                     A::SparseArray{<:Any,N}, CA::Symbol,
-                    α::Number=true, β::Number=true) where {N}
+                    α::Number=One(), β::Number=One()) where {N}
     (N == length(indCinA) && TupleTools.isperm(indCinA)) ||
         throw(ArgumentError("Invalid permutation of length $N: $indCinA"))
     size(C) == TupleTools.getindices(size(A), indCinA) ||
         throw(DimensionMismatch("non-matching sizes while adding arrays"))
-
-    β == one(β) || (iszero(β) ? _zero!(C) : LinearAlgebra.lmul!(β, C))
+    scale!(C, β)
     for (IA, vA) in A.data
         IC = CartesianIndex(TupleTools.getindices(IA.I, indCinA))
         C[IC] += α * (CA == :C ? conj(vA) : vA)
@@ -18,7 +17,7 @@ end
 
 function tensortrace!(C::SparseArray{<:Any,NC}, indCinA,
                       A::SparseArray{<:Any,NA}, CA::Symbol, cindA1, cindA2,
-                      α::Number=true, β::Number=false) where {NA,NC}
+                      α::Number=One(), β::Number=Zero()) where {NA,NC}
     NC == length(indCinA) ||
         throw(ArgumentError("Invalid selection of $NC out of $NA: $indCinA"))
     NA - NC == 2 * length(cindA1) == 2 * length(cindA2) ||
@@ -35,7 +34,7 @@ function tensortrace!(C::SparseArray{<:Any,NC}, indCinA,
     sizeC == TupleTools.getindices(sizeA, indCinA) ||
         throw(DimensionMismatch("non-matching sizes"))
 
-    β == one(β) || (iszero(β) ? _zero!(C) : LinearAlgebra.lmul!(β, C))
+    scale!(C, β)
     for (IA, v) in A.data
         IAc1 = CartesianIndex(TupleTools.getindices(IA.I, cindA1))
         IAc2 = CartesianIndex(TupleTools.getindices(IA.I, cindA2))
@@ -50,7 +49,7 @@ end
 function tensorcontract!(C::SparseArray, indCinoAB,
                          A::SparseArray, CA::Symbol, oindA, cindA,
                          B::SparseArray, CB::Symbol, oindB, cindB,
-                         α::Number=true, β::Number=false)
+                         α::Number=One(), β::Number=Zero())
     pA = (oindA..., cindA...)
     (length(pA) == ndims(A) && TupleTools.isperm(pA)) ||
         throw(ArgumentError("invalid permutation of length $(ndims(A)): $pA"))
@@ -76,7 +75,7 @@ function tensorcontract!(C::SparseArray, indCinoAB,
     TupleTools.getindices((osizeA..., osizeB...), indCinoAB) == size(C) ||
         throw(DimensionMismatch("non-matching sizes in uncontracted dimensions"))
 
-    β == one(β) || (iszero(β) ? _zero!(C) : LinearAlgebra.lmul!(β, C))
+    scale!(C, β)
 
     keysA = sort!(collect(nonzero_keys(A));
                   by=IA -> CartesianIndex(TupleTools.getindices(IA.I, cindA)))

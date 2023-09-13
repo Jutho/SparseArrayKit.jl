@@ -1,12 +1,7 @@
 module SparseArrayKitTensorOperations
 
-@static if isdefined(Base, :get_extension)
-    using TensorOperations: TensorOperations, Index2Tuple, linearize
-else
-    using ..TensorOperations: TensorOperations, Index2Tuple, linearize
-end
-const TO = TensorOperations
-
+import TensorOperations as TO
+using TensorOperations: Index2Tuple, linearize, numind
 using SparseArrayKit: tensoradd!, tensortrace!, tensorcontract!, SparseArray
 
 function TO.tensoradd!(C::SparseArray, pC::Index2Tuple,
@@ -30,12 +25,12 @@ function TO.tensorcontract!(C::SparseArray, pC::Index2Tuple,
 end
 
 function TO.tensoradd_type(TC, pA::Index2Tuple, ::SparseArray, ::Symbol)
-    return SparseArray{TC,sum(length.(pA))}
+    return SparseArray{TC,numind(pA)}
 end
 
 function TO.tensorcontract_type(TC, pC, ::SparseArray, pA, conjA,
                                 ::SparseArray, pB, conjB)
-    return SparseArray{TC,sum(length.(pC))}
+    return SparseArray{TC,numind(pC)}
 end
 
 end
