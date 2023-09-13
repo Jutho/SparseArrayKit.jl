@@ -10,9 +10,13 @@ VectorInterface.zerovector!!(x::SparseArray) = zerovector!(x)
 
 # scale, scale! & scale!!
 #-------------------------
-VectorInterface.scale(x::SparseArray, α::Number) = α === One() ? copy(x) : x * α
+function VectorInterface.scale(x::SparseArray, α::Number)
+    α === One() && return copy(x)
+    α === Zero() && return zerovector(x)
+    return x * α
+end
 function VectorInterface.scale!(x::SparseArray, α::Number)
-    α === One() && return x
+    iszero(α) && return zerovector!(x)
     # typical occupation in a dict is about 30% from experimental testing
     # the benefits of scaling all values (e.g. SIMD) largely outweight the extra work
     scale!(x.data.vals, α)
