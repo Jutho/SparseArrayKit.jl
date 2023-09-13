@@ -4,10 +4,6 @@ using VectorInterface
 using LinearAlgebra
 using TupleTools
 
-if !isdefined(Base, :get_extension)
-    using Requires
-end
-
 const IndexTuple{N} = NTuple{N,Int}
 
 export SparseArray
