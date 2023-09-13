@@ -1,9 +1,12 @@
 name: CI
+
 on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - 'main'
+      - 'master'
+      - 'release-'
     tags: '*'
   pull_request:
 
