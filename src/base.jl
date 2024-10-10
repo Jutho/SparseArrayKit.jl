@@ -54,7 +54,7 @@ end
 
 # array manipulation
 function Base.permutedims!(dst::SparseArray, src::SparseArray, p)
-    return tensoradd!(dst, tuple(p...), src, :N, true, false)
+    return tensoradd!(dst, src, false, tuple(p...), true, false)
 end
 
 function Base.reshape(parent::SparseArray{T}, dims::Dims) where {T}

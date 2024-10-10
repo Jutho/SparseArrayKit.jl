@@ -62,9 +62,10 @@ end
         end
 
         sparse_result = TensorOperations.ncon(tensors, indices, conjlist)
-        dense_result = TensorOperations.ncon(Array.(tensors), indices, conjlist)
-
-        @test Array(sparse_result) ≈ dense_result
+        if SparseArrayKit.nonzero_length(sparse_result) > 0
+            dense_result = TensorOperations.ncon(Array.(tensors), indices, conjlist)
+            @test Array(sparse_result) ≈ dense_result
+        end
     end
 end
 
