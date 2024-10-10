@@ -87,9 +87,12 @@ function LinearAlgebra.mul!(C::SM, A::ASM, B::ASM, α::Number, β::Number)
     AA = A isa Union{Adjoint,Transpose} ? parent(A) : A
     BB = B isa Union{Adjoint,Transpose} ? parent(B) : B
 
-    return tensorcontract!(C, AA, conjA, oindA, cindA, BB, conjB, oindB, cindB, (1, 2), α,
+    return tensorcontract!(C, AA, (oindA, cindA), conjA, BB, (cindB, oindB), conjB,
+                           ((1, 2), ()), α,
                            β)
 end
 
-LinearAlgebra.adjoint!(C::SM, A::SM) = tensoradd!(C, A, true, (2, 1), One(), Zero())
-LinearAlgebra.transpose!(C::SM, A::SM) = tensoradd!(C, A, false, (2, 1), One(), Zero())
+LinearAlgebra.adjoint!(C::SM, A::SM) = tensoradd!(C, A, ((2, 1), ()), true, One(), Zero())
+function LinearAlgebra.transpose!(C::SM, A::SM)
+    return tensoradd!(C, A, ((2, 1), ()), false, One(), Zero())
+end
