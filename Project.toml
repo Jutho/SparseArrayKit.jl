@@ -18,7 +18,13 @@ SparseArrayKitSparseArrays = "SparseArrays"
 
 [compat]
 Aqua = "0.8"
+LinearAlgebra = "1"
 PackageExtensionCompat = "1"
+Random = "1"
+SparseArrays = "1"
+Strided = "2"
+Test = "1"
+TestExtras = "0.3"
 TensorOperations = "5"
 TupleTools = "1.1"
 VectorInterface = "0.4.1"
