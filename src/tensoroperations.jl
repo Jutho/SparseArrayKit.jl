@@ -1,99 +1,85 @@
+const TO = TensorOperations
+
+struct SparseArrayBackend <: TO.AbstractBackend end
+
 # TensorOperations compatiblity
 #-------------------------------
-function tensoradd!(C::SparseArray{<:Any,N},
-                    A::SparseArray{<:Any,N}, conjA::Bool, pA,
-                    α::Number=One(), β::Number=One()) where {N}
-    (N == length(pA) && TupleTools.isperm(pA)) ||
-        throw(ArgumentError("Invalid permutation of length $N: $pA"))
-    size(C) == TupleTools.getindices(size(A), pA) ||
-        throw(DimensionMismatch("non-matching sizes while adding arrays"))
+function TO.select_backend(::typeof(TO.tensoradd!), C::SparseArray, A::SparseArray)
+    return SparseArrayBackend()
+end
+
+function TO.tensoradd!(C::SparseArray,
+                       A::SparseArray, pA::Index2Tuple, conjA::Bool,
+                       α::Number, β::Number, ::SparseArrayBackend, allocator)
+    TO.argcheck_tensoradd(C, A, pA)
+    TO.dimcheck_tensoradd(C, A, pA)
+
     scale!(C, β)
+    pA_lin = linearize(pA)
     for (IA, vA) in A.data
-        IC = CartesianIndex(TupleTools.getindices(IA.I, pA))
+        IC = CartesianIndex(TupleTools.getindices(IA.I, pA_lin))
         C[IC] += α * (conjA ? conj(vA) : vA)
     end
+
     return C
 end
 
-function tensortrace!(C::SparseArray{<:Any,NC},
-                      A::SparseArray{<:Any,NA}, conjA::Bool, p, q1, q2,
-                      α::Number=One(), β::Number=Zero()) where {NA,NC}
-    NC == length(p) ||
-        throw(ArgumentError("Invalid selection of $NC out of $NA: $p"))
-    NA - NC == 2 * length(q1) == 2 * length(q2) ||
-        throw(ArgumentError("invalid number of trace dimension"))
-    pA = (p..., q1..., q2...)
-    TupleTools.isperm(pA) ||
-        throw(ArgumentError("invalid permutation of length $(ndims(A)): $pA"))
+function TO.select_backend(::typeof(TO.tensortrace!), C::SparseArray, A::SparseArray)
+    return SparseArrayBackend()
+end
 
-    sizeA = size(A)
-    sizeC = size(C)
-
-    TupleTools.getindices(sizeA, q1) == TupleTools.getindices(sizeA, q2) ||
-        throw(DimensionMismatch("non-matching trace sizes"))
-    sizeC == TupleTools.getindices(sizeA, p) ||
-        throw(DimensionMismatch("non-matching sizes"))
+function TO.tensortrace!(C::SparseArray,
+                         A::SparseArray, p::Index2Tuple, q::Index2Tuple, conjA::Bool,
+                         α::Number, β::Number, ::SparseArrayBackend, allocator)
+    TO.argcheck_tensortrace(C, A, p, q)
+    TO.dimcheck_tensortrace(C, A, p, q)
 
     scale!(C, β)
+    p_lin = linearize(p)
     for (IA, v) in A.data
-        IAc1 = CartesianIndex(TupleTools.getindices(IA.I, q1))
-        IAc2 = CartesianIndex(TupleTools.getindices(IA.I, q2))
+        IAc1 = CartesianIndex(TupleTools.getindices(IA.I, q[1]))
+        IAc2 = CartesianIndex(TupleTools.getindices(IA.I, q[2]))
         IAc1 == IAc2 || continue
 
-        IC = CartesianIndex(TupleTools.getindices(IA.I, p))
+        IC = CartesianIndex(TupleTools.getindices(IA.I, p_lin))
         C[IC] += α * (conjA ? conj(v) : v)
     end
+
     return C
 end
 
-function tensorcontract!(C::SparseArray,
-                         A::SparseArray, conjA::Bool, oindA, cindA,
-                         B::SparseArray, conjB::Bool, oindB, cindB,
-                         indCinoAB,
-                         α::Number=One(), β::Number=Zero())
-    pA = (oindA..., cindA...)
-    (length(pA) == ndims(A) && TupleTools.isperm(pA)) ||
-        throw(ArgumentError("invalid permutation of length $(ndims(A)): $pA"))
-    pB = (oindB..., cindB...)
-    (length(pB) == ndims(B) && TupleTools.isperm(pB)) ||
-        throw(ArgumentError("invalid permutation of length $(ndims(B)): $pB"))
-    (length(oindA) + length(oindB) == ndims(C)) ||
-        throw(ArgumentError("non-matching output indices in contraction"))
-    (ndims(C) == length(indCinoAB) && isperm(indCinoAB)) ||
-        throw(ArgumentError("invalid permutation of length $(ndims(C)): $indCinoAB"))
+function TO.select_backend(::typeof(TO.tensorcontract!),
+                           C::SparseArray, A::SparseArray, B::SparseArray)
+    return SparseArrayBackend()
+end
 
-    sizeA = size(A)
-    sizeB = size(B)
-    sizeC = size(C)
-
-    csizeA = TupleTools.getindices(sizeA, cindA)
-    csizeB = TupleTools.getindices(sizeB, cindB)
-    osizeA = TupleTools.getindices(sizeA, oindA)
-    osizeB = TupleTools.getindices(sizeB, oindB)
-
-    csizeA == csizeB ||
-        throw(DimensionMismatch("non-matching sizes in contracted dimensions"))
-    TupleTools.getindices((osizeA..., osizeB...), indCinoAB) == size(C) ||
-        throw(DimensionMismatch("non-matching sizes in uncontracted dimensions"))
+function TO.tensorcontract!(C::SparseArray,
+                            A::SparseArray, pA::Index2Tuple, conjA::Bool,
+                            B::SparseArray, pB::Index2Tuple, conjB::Bool,
+                            pAB::Index2Tuple,
+                            α::Number, β::Number, ::SparseArrayBackend, allocator)
+    TO.argcheck_tensorcontract(C, A, pA, B, pB, pAB)
+    TO.dimcheck_tensorcontract(C, A, pA, B, pB, pAB)
 
     scale!(C, β)
+    pAB_lin = linearize(pAB)
 
     keysA = sort!(collect(nonzero_keys(A));
-                  by=IA -> CartesianIndex(TupleTools.getindices(IA.I, cindA)))
+                  by=IA -> CartesianIndex(TupleTools.getindices(IA.I, pA[2])))
     keysB = sort!(collect(nonzero_keys(B));
-                  by=IB -> CartesianIndex(TupleTools.getindices(IB.I, cindB)))
+                  by=IB -> CartesianIndex(TupleTools.getindices(IB.I, pB[1])))
 
     iA = iB = 1
     @inbounds while iA <= length(keysA) && iB <= length(keysB)
         IA = keysA[iA]
         IB = keysB[iB]
-        IAc = CartesianIndex(TupleTools.getindices(IA.I, cindA))
-        IBc = CartesianIndex(TupleTools.getindices(IB.I, cindB))
+        IAc = CartesianIndex(TupleTools.getindices(IA.I, pA[2]))
+        IBc = CartesianIndex(TupleTools.getindices(IB.I, pB[1]))
         if IAc == IBc
             Ic = IAc
             jA = iA
             while jA < length(keysA)
-                if CartesianIndex(TupleTools.getindices(keysA[jA + 1].I, cindA)) == Ic
+                if CartesianIndex(TupleTools.getindices(keysA[jA + 1].I, pA[2])) == Ic
                     jA += 1
                 else
                     break
@@ -101,7 +87,7 @@ function tensorcontract!(C::SparseArray,
             end
             jB = iB
             while jB < length(keysB)
-                if CartesianIndex(TupleTools.getindices(keysB[jB + 1].I, cindB)) == Ic
+                if CartesianIndex(TupleTools.getindices(keysB[jB + 1].I, pB[1])) == Ic
                     jB += 1
                 else
                     break
@@ -112,13 +98,13 @@ function tensorcontract!(C::SparseArray,
             if length(rA) < length(rB)
                 for kB in rB
                     IB = keysB[kB]
-                    IBo = CartesianIndex(TupleTools.getindices(IB.I, oindB))
+                    IBo = CartesianIndex(TupleTools.getindices(IB.I, pB[2]))
                     vB = B[IB]
                     for kA in rA
                         IA = keysA[kA]
-                        IAo = CartesianIndex(TupleTools.getindices(IA.I, oindA))
+                        IAo = CartesianIndex(TupleTools.getindices(IA.I, pA[1]))
                         IABo = CartesianIndex(IAo, IBo)
-                        IC = CartesianIndex(TupleTools.getindices(IABo.I, indCinoAB))
+                        IC = CartesianIndex(TupleTools.getindices(IABo.I, pAB_lin))
                         vA = A[IA]
                         v = α * (conjA ? conj(vA) : vA) * (conjB ? conj(vB) : vB)
                         increaseindex!(C, v, IC)
@@ -127,14 +113,14 @@ function tensorcontract!(C::SparseArray,
             else
                 for kA in rA
                     IA = keysA[kA]
-                    IAo = CartesianIndex(TupleTools.getindices(IA.I, oindA))
+                    IAo = CartesianIndex(TupleTools.getindices(IA.I, pA[1]))
                     vA = A[IA]
                     for kB in rB
                         IB = keysB[kB]
-                        IBo = CartesianIndex(TupleTools.getindices(IB.I, oindB))
+                        IBo = CartesianIndex(TupleTools.getindices(IB.I, pB[2]))
                         vB = B[IB]
                         IABo = CartesianIndex(IAo, IBo)
-                        IC = CartesianIndex(TupleTools.getindices(IABo.I, indCinoAB))
+                        IC = CartesianIndex(TupleTools.getindices(IABo.I, pAB_lin))
                         v = α * (conjA ? conj(vA) : vA) * (conjB ? conj(vB) : vB)
                         increaseindex!(C, v, IC)
                     end
@@ -148,5 +134,17 @@ function tensorcontract!(C::SparseArray,
             iB += 1
         end
     end
+
     return C
+end
+
+function TO.tensoradd_type(TC, ::SparseArray, pA::Index2Tuple, ::Bool)
+    return SparseArray{TC,TO.numind(pA)}
+end
+
+function TO.tensorcontract_type(TC,
+                                ::SparseArray, pA::Index2Tuple, conjA::Bool,
+                                ::SparseArray, pB::Index2Tuple, conjB::Bool,
+                                pAB::Index2Tuple)
+    return SparseArray{TC,TO.numind(pAB)}
 end
