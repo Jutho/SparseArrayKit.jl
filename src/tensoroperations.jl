@@ -1,16 +1,72 @@
 const TO = TensorOperations
 
-struct SparseArrayBackend <: TO.AbstractBackend end
+struct SparseBackend <: TO.AbstractBackend end
 
-# TensorOperations compatiblity
-#-------------------------------
+# Select `SparseBackend` for all operations on `SparseArray` instances
 function TO.select_backend(::typeof(TO.tensoradd!), C::SparseArray, A::SparseArray)
-    return SparseArrayBackend()
+    return SparseBackend()
+end
+function TO.select_backend(::typeof(TO.tensortrace!), C::SparseArray, A::SparseArray)
+    return SparseBackend()
+end
+function TO.select_backend(::typeof(TO.tensorcontract!),
+                           C::SparseArray, A::SparseArray, B::SparseArray)
+    return SparseBackend()
 end
 
+# Convert to `SparseArray` when forcing `SparseBackend`
+function TO.tensoradd!(C::AbstractArray,
+                       A::AbstractArray, pA::Index2Tuple, conjA::Bool,
+                       α::Number, β::Number,
+                       backend::SparseBackend, allocator=DefaultAllocator())
+    if C isa SparseArray
+        TO.tensoradd!(C, SparseArray(A), pA, conjA, α, β, backend, allocator)
+    else
+        Csparse = SparseArray(C)
+        TO.tensoradd!(Csparse, SparseArray(A), pA, conjA, α, β, backend, allocator)
+        copy!(C, Csparse)
+    end
+    return C
+end
+
+function TO.tensortrace!(C::AbstractArray,
+                         A::AbstractArray, p::Index2Tuple, q::Index2Tuple, conjA::Bool,
+                         α::Number, β::Number,
+                         backend::SparseBackend, allocator=DefaultAllocator())
+    if C isa SparseArray
+        TO.tensortrace!(C, SparseArray(A), p, q, conjA, α, β, backend, allocator)
+    else
+        Csparse = SparseArray(C)
+        TO.tensortrace!(Csparse, SparseArray(A), p, q, conjA, α, β, backend, allocator)
+        copy!(C, Csparse)
+    end
+    return C
+end
+
+function TO.tensorcontract!(C::AbstractArray,
+                            A::AbstractArray, pA::Index2Tuple, conjA::Bool,
+                            B::AbstractArray, pB::Index2Tuple, conjB::Bool,
+                            pAB::Index2Tuple,
+                            α::Number, β::Number,
+                            backend::SparseBackend, allocator=DefaultAllocator())
+    if C isa SparseArray
+        TO.tensorcontract!(C, SparseArray(A), pA, conjA, SparseArray(B), pB, conjB, pAB, α,
+                           β, backend, allocator)
+    else
+        Csparse = SparseArray(C)
+        TO.tensorcontract!(Csparse, SparseArray(A), pA, conjA, SparseArray(B), pB, conjB,
+                           pAB, α, β, backend, allocator)
+        copy!(C, Csparse)
+    end
+    return C
+end
+
+# Actual SparseArray implementation of TensorOperations interface
+#-------------------------------------------------------------------------------------------
 function TO.tensoradd!(C::SparseArray,
                        A::SparseArray, pA::Index2Tuple, conjA::Bool,
-                       α::Number, β::Number, ::SparseArrayBackend, allocator)
+                       α::Number, β::Number,
+                       ::SparseBackend, allocator=DefaultAllocator())
     TO.argcheck_tensoradd(C, A, pA)
     TO.dimcheck_tensoradd(C, A, pA)
 
@@ -24,13 +80,10 @@ function TO.tensoradd!(C::SparseArray,
     return C
 end
 
-function TO.select_backend(::typeof(TO.tensortrace!), C::SparseArray, A::SparseArray)
-    return SparseArrayBackend()
-end
-
 function TO.tensortrace!(C::SparseArray,
                          A::SparseArray, p::Index2Tuple, q::Index2Tuple, conjA::Bool,
-                         α::Number, β::Number, ::SparseArrayBackend, allocator)
+                         α::Number, β::Number,
+                         ::SparseBackend, allocator=DefaultAllocator())
     TO.argcheck_tensortrace(C, A, p, q)
     TO.dimcheck_tensortrace(C, A, p, q)
 
@@ -48,16 +101,12 @@ function TO.tensortrace!(C::SparseArray,
     return C
 end
 
-function TO.select_backend(::typeof(TO.tensorcontract!),
-                           C::SparseArray, A::SparseArray, B::SparseArray)
-    return SparseArrayBackend()
-end
-
 function TO.tensorcontract!(C::SparseArray,
                             A::SparseArray, pA::Index2Tuple, conjA::Bool,
                             B::SparseArray, pB::Index2Tuple, conjB::Bool,
                             pAB::Index2Tuple,
-                            α::Number, β::Number, ::SparseArrayBackend, allocator)
+                            α::Number, β::Number,
+                            ::SparseBackend, allocator=DefaultAllocator())
     TO.argcheck_tensorcontract(C, A, pA, B, pB, pAB)
     TO.dimcheck_tensorcontract(C, A, pA, B, pB, pAB)
 
