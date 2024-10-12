@@ -90,6 +90,10 @@ end
     @test one(aa) + zero(aa) == one(bb)
     @test adjoint!(copy(aa), bb) == SparseArray(adjoint(bb)) == adjoint(Array(bb))
     @test transpose!(copy(aa), bb) == SparseArray(transpose(bb)) == transpose(Array(bb))
+
+    @test SparseArray(I, (5, 5)) == I
+    @test SparseArray{Float64}(I, (5, 5)) == I
+    @test size(SparseArray(I, 3, 8)) == (3, 8)
 end
 
 end
