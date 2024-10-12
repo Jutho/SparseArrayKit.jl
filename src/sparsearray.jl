@@ -17,6 +17,15 @@ function SparseArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N}
     return SparseArray{T,N}(undef, dims)
 end
 SparseArray{T}(::UndefInitializer, dims...) where {T} = SparseArray{T}(undef, dims)
+function SparseArray{T}(a::UniformScaling, dims::Dims{2}) where {T}
+    A = SparseArray{T}(undef, dims)
+    for i in 1:min(dims...)
+        A[i, i] = a[1, 1]
+    end
+    return A
+end
+SparseArray(a::UniformScaling, dims::Dims{2}) = SparseArray{eltype(a)}(a, dims)
+SparseArray(a::UniformScaling, d1::Int, d2::Int) = SparseArray{eltype(a)}(a, (d1, d2))
 
 nonzero_pairs(a::SparseArray) = pairs(a.data)
 nonzero_keys(a::SparseArray) = keys(a.data)

@@ -1,7 +1,7 @@
 name = "SparseArrayKit"
 uuid = "a9a3c162-d163-4c15-8926-b8794fbefed2"
 authors = ["Lukas Devos <lukas.devos@ugent.be>", "Maarten Van Damme <maartenvd1994@gmail.com>", "Jutho Haegeman <jutho.haegeman@ugent.be>"]
-version = "0.3.1"
+version = "0.4"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -12,18 +12,23 @@ VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 
 [weakdeps]
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
 [extensions]
 SparseArrayKitSparseArrays = "SparseArrays"
-SparseArrayKitTensorOperations = "TensorOperations"
 
 [compat]
+Aqua = "0.8"
+LinearAlgebra = "1"
 PackageExtensionCompat = "1"
-TensorOperations = "4"
+Random = "1"
+SparseArrays = "1"
+Strided = "2"
+Test = "1"
+TestExtras = "0.3"
+TensorOperations = "5"
 TupleTools = "1.1"
 VectorInterface = "0.4.1"
-julia = "1.6"
+julia = "1.8"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
@@ -31,9 +36,8 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Strided = "5e0ebb24-38b0-5f93-81fe-25c709ecae67"
-TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 
 [targets]
-test = ["Test", "TestExtras", "TensorOperations", "Strided", "Random", "LinearAlgebra", "SparseArrays", "Aqua"]
+test = ["Test", "TestExtras", "Strided", "Random", "LinearAlgebra", "SparseArrays", "Aqua"]

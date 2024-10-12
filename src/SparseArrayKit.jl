@@ -1,10 +1,9 @@
 module SparseArrayKit
 
 using VectorInterface
+using TensorOperations
 using LinearAlgebra
 using TupleTools
-
-const IndexTuple{N} = NTuple{N,Int}
 
 export SparseArray
 export nonzero_pairs, nonzero_keys, nonzero_values, nonzero_length

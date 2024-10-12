@@ -77,8 +77,8 @@ const ASM{T} = Union{SparseArray{T,2},
 
 LinearAlgebra.mul!(C::SM, A::ASM, B::ASM) = mul!(C, A, B, one(eltype(C)), zero(eltype(C)))
 function LinearAlgebra.mul!(C::SM, A::ASM, B::ASM, α::Number, β::Number)
-    CA = A isa Adjoint ? :C : :N
-    CB = B isa Adjoint ? :C : :N
+    conjA = A isa Adjoint
+    conjB = B isa Adjoint
     oindA = A isa Union{Adjoint,Transpose} ? (2,) : (1,)
     cindA = A isa Union{Adjoint,Transpose} ? (1,) : (2,)
     oindB = B isa Union{Adjoint,Transpose} ? (1,) : (2,)
@@ -87,8 +87,12 @@ function LinearAlgebra.mul!(C::SM, A::ASM, B::ASM, α::Number, β::Number)
     AA = A isa Union{Adjoint,Transpose} ? parent(A) : A
     BB = B isa Union{Adjoint,Transpose} ? parent(B) : B
 
-    return tensorcontract!(C, (1, 2), AA, CA, oindA, cindA, BB, CB, oindB, cindB, α, β)
+    return tensorcontract!(C, AA, (oindA, cindA), conjA, BB, (cindB, oindB), conjB,
+                           ((1, 2), ()), α,
+                           β)
 end
 
-LinearAlgebra.adjoint!(C::SM, A::SM) = tensoradd!(C, (2, 1), A, :C, One(), Zero())
-LinearAlgebra.transpose!(C::SM, A::SM) = tensoradd!(C, (2, 1), A, :N, One(), Zero())
+LinearAlgebra.adjoint!(C::SM, A::SM) = tensoradd!(C, A, ((2, 1), ()), true, One(), Zero())
+function LinearAlgebra.transpose!(C::SM, A::SM)
+    return tensoradd!(C, A, ((2, 1), ()), false, One(), Zero())
+end
